@@ -1,7 +1,13 @@
 //! Cyphernet node address types
 
+#[cfg(feature = "i2p")]
+pub mod i2p;
+mod net;
+#[cfg(feature = "nym")]
+pub mod nym;
 mod proxied;
 mod universal;
 
+pub use net::NetAddr;
 pub use proxied::ProxiedAddr;
 pub use universal::UniversalAddr;

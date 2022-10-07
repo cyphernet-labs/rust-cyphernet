@@ -4,4 +4,7 @@
 //! end-to-end encryption without central authorities/PKI (Noise-based
 //! encryption protocols like lightning wire protocol, NTLS etc).
 
+#[macro_use]
+extern crate amplify;
+
 pub mod addr;
