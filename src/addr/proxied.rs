@@ -1,7 +1,11 @@
-
+use std::fmt::Display;
 use std::net::SocketAddr;
 
-pub struct ProxiedAddr<A: ToString = String> {
+use super::NetAddr;
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("socks5h://{proxy_addr}/{remote_addr}")]
+pub struct ProxiedAddr<A: Display = NetAddr> {
     pub proxy_addr: SocketAddr,
     pub remote_addr: A,
 }

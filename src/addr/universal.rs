@@ -1,8 +1,15 @@
-use super::ProxiedAddr;
+use std::fmt::Display;
 use std::net::SocketAddr;
 
-pub enum UniversalAddr<A: ToString = String> {
+use super::{NetAddr, ProxiedAddr};
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[display(inner)]
+pub enum UniversalAddr<A: Display = NetAddr> {
+    #[from]
     Proxied(ProxiedAddr<A>),
+
+    #[from]
     Direct(SocketAddr),
 }
 
@@ -21,11 +28,5 @@ impl From<UniversalAddr> for SocketAddr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
             UniversalAddr::Direct(socket_addr) => socket_addr,
         }
-    }
-}
-
-impl From<SocketAddr> for UniversalAddr {
-    fn from(socket_addr: SocketAddr) -> Self {
-        UniversalAddr::Direct(socket_addr)
     }
 }
