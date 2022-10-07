@@ -1,14 +1,47 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use std::net::SocketAddr;
+
+pub struct ProxiedAddr<A: ToString = String> {
+    pub proxy_addr: SocketAddr,
+    pub remote_addr: A,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl From<&ProxiedAddr> for SocketAddr {
+    fn from(addr: &ProxiedAddr) -> Self {
+        addr.proxy_addr
+    }
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+impl From<ProxiedAddr> for SocketAddr {
+    fn from(addr: ProxiedAddr) -> Self {
+        addr.proxy_addr
+    }
+}
+
+pub enum UniversalAddr<A: ToString = String> {
+    Proxied(ProxiedAddr<A>),
+    Direct(SocketAddr),
+}
+
+impl From<&UniversalAddr> for SocketAddr {
+    fn from(addr: &UniversalAddr) -> Self {
+        match addr {
+            UniversalAddr::Proxied(proxied) => proxied.into(),
+            UniversalAddr::Direct(socket_addr) => *socket_addr,
+        }
+    }
+}
+
+impl From<UniversalAddr> for SocketAddr {
+    fn from(addr: UniversalAddr) -> Self {
+        match addr {
+            UniversalAddr::Proxied(proxied) => proxied.into(),
+            UniversalAddr::Direct(socket_addr) => socket_addr,
+        }
+    }
+}
+
+impl From<SocketAddr> for UniversalAddr {
+    fn from(socket_addr: SocketAddr) -> Self {
+        UniversalAddr::Direct(socket_addr)
     }
 }
