@@ -5,6 +5,6 @@
 //! encryption protocols like lightning wire protocol, NTLS etc).
 
 #[macro_use]
-extern crate amplify;
+extern crate amplify_derive;
 
 pub mod addr;
