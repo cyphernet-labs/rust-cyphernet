@@ -8,3 +8,4 @@
 extern crate amplify_derive;
 
 pub mod addr;
+pub mod crypto;

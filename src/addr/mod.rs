@@ -3,6 +3,7 @@
 #[cfg(feature = "i2p")]
 pub mod i2p;
 mod net;
+mod node;
 #[cfg(feature = "nym")]
 pub mod nym;
 mod proxied;
