@@ -10,5 +10,6 @@ mod proxied;
 mod universal;
 
 pub use net::NetAddr;
+pub use node::{LocalNode, NodeId, PeerAddr};
 pub use proxied::ProxiedAddr;
 pub use universal::UniversalAddr;
