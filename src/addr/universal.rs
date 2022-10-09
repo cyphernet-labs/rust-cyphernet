@@ -16,14 +16,27 @@ pub enum UniversalAddr<A: Addr = SocketAddr> {
 }
 
 impl<A: Addr> UniversalAddr<A> {
-    fn as_remote_addr(&self) -> &A {
+    pub fn replace_proxy(self, proxy_addr: SocketAddr) -> Self {
+        match self {
+            UniversalAddr::Proxied(mut addr) => {
+                addr.proxy_addr = proxy_addr;
+                UniversalAddr::Proxied(addr)
+            }
+            UniversalAddr::Direct(remote_addr) => UniversalAddr::Proxied(ProxiedAddr {
+                proxy_addr,
+                remote_addr,
+            }),
+        }
+    }
+
+    pub fn as_remote_addr(&self) -> &A {
         match self {
             UniversalAddr::Proxied(proxied) => &proxied.remote_addr,
             UniversalAddr::Direct(socket_addr) => socket_addr,
         }
     }
 
-    fn into_remote_addr(self) -> A {
+    pub fn into_remote_addr(self) -> A {
         match self {
             UniversalAddr::Proxied(proxied) => proxied.remote_addr,
             UniversalAddr::Direct(socket_addr) => socket_addr,
