@@ -1,3 +1,5 @@
+mod ed25519;
+
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::ops::{Add, AddAssign};
