@@ -6,6 +6,7 @@
 
 #[macro_use]
 extern crate amplify_derive;
+extern crate core;
 
 pub mod addr;
 pub mod crypto;
