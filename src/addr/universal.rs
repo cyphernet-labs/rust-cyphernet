@@ -1,11 +1,11 @@
 use std::fmt::Display;
 use std::net::SocketAddr;
 
-use super::{NetAddr, ProxiedAddr};
+use super::{HostAddr, ProxiedAddr};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
-pub enum UniversalAddr<A: Display = NetAddr> {
+pub enum UniversalAddr<A: Display = HostAddr> {
     #[from]
     Proxied(ProxiedAddr<A>),
 

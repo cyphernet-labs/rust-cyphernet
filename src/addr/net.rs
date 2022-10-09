@@ -1,12 +1,12 @@
-use std::net::SocketAddr;
+use std::net::IpAddr;
 use std::str::FromStr;
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display(inner)]
 #[non_exhaustive]
-pub enum NetAddr {
+pub enum HostAddr {
     #[from]
-    Socket(SocketAddr),
+    Socket(IpAddr),
 
     #[cfg(feature = "tor")]
     #[from]
@@ -24,7 +24,28 @@ pub enum NetAddr {
     Dns(String),
 }
 
-impl FromStr for NetAddr {
+impl FromStr for HostAddr {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        todo!()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[non_exhaustive]
+pub struct NetAddr<const DEFAULT_PORT: u16> {
+    pub host: HostAddr,
+    pub port: Option<u16>,
+}
+
+impl<const DEFAULT_PORT: u16> NetAddr<DEFAULT_PORT> {
+    pub fn port(&self) -> u16 {
+        self.port.unwrap_or(DEFAULT_PORT)
+    }
+}
+
+impl<const DEFAULT_PORT: u16> FromStr for NetAddr<DEFAULT_PORT> {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -9,7 +9,7 @@ pub mod nym;
 mod proxied;
 mod universal;
 
-pub use net::NetAddr;
+pub use net::HostAddr;
 pub use node::{LocalNode, NodeId, PeerAddr};
 pub use proxied::ProxiedAddr;
 pub use universal::UniversalAddr;
