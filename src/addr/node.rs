@@ -55,6 +55,17 @@ pub struct PeerAddr<E: Ec + ?Sized, A: Addr = UniversalAddr> {
     addr: A,
 }
 
+impl<E: Ec + fmt::Debug + ?Sized, A: Addr> Addr for PeerAddr<E, A>
+where
+    E::PubKey: FromStr,
+    <E::PubKey as FromStr>::Err: std::error::Error,
+    <A as FromStr>::Err: Into<PeerAddrParseError<E>>,
+{
+    fn port(&self) -> u16 {
+        self.addr.port()
+    }
+}
+
 impl<E: Ec + fmt::Debug + ?Sized, A: Addr> FromStr for PeerAddr<E, A>
 where
     E::PubKey: FromStr,
