@@ -15,7 +15,18 @@ pub enum UniversalAddr<A: Addr = SocketAddr> {
     Direct(A),
 }
 
+#[derive(Copy, Clone, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum ProxyError {
+    /// proxy information is already present in the address
+    ProxyPresent,
+}
+
 impl<A: Addr> UniversalAddr<A> {
+    pub fn has_proxy(&self) -> bool {
+        matches!(self, UniversalAddr::Proxied(_))
+    }
+
     pub fn replace_proxy(self, proxy_addr: SocketAddr) -> Self {
         match self {
             UniversalAddr::Proxied(mut addr) => {
@@ -26,6 +37,16 @@ impl<A: Addr> UniversalAddr<A> {
                 proxy_addr,
                 remote_addr,
             }),
+        }
+    }
+
+    pub fn try_proxy(self, proxy_addr: SocketAddr) -> Result<Self, ProxyError> {
+        match self {
+            UniversalAddr::Proxied(mut addr) => Err(ProxyError::ProxyPresent),
+            UniversalAddr::Direct(remote_addr) => Ok(UniversalAddr::Proxied(ProxiedAddr {
+                proxy_addr,
+                remote_addr,
+            })),
         }
     }
 
