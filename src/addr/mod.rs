@@ -14,7 +14,7 @@ pub use net::HostAddr;
 pub use node::{LocalNode, NodeId, PeerAddr};
 pub use proxied::ProxiedAddr;
 pub use socket::SocketAddr;
-pub use universal::UniversalAddr;
+pub use universal::{ProxyError, UniversalAddr};
 
 pub trait Addr: std::fmt::Display + std::str::FromStr {
     fn port(&self) -> u16;
