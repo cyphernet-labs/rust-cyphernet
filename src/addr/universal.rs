@@ -12,7 +12,23 @@ pub enum UniversalAddr<A: Addr = SocketAddr> {
     Proxied(ProxiedAddr<A>),
 
     #[from]
-    Direct(SocketAddr),
+    Direct(A),
+}
+
+impl<A: Addr> UniversalAddr<A> {
+    fn as_remote_addr(&self) -> &A {
+        match self {
+            UniversalAddr::Proxied(proxied) => &proxied.remote_addr,
+            UniversalAddr::Direct(socket_addr) => socket_addr,
+        }
+    }
+
+    fn into_remote_addr(self) -> A {
+        match self {
+            UniversalAddr::Proxied(proxied) => proxied.remote_addr,
+            UniversalAddr::Direct(socket_addr) => socket_addr,
+        }
+    }
 }
 
 impl<A: Addr> Addr for UniversalAddr<A> {
@@ -24,20 +40,20 @@ impl<A: Addr> Addr for UniversalAddr<A> {
     }
 }
 
-impl<A: Addr> From<&UniversalAddr<A>> for SocketAddr {
+impl<A: Addr + Into<SocketAddr> + Copy> From<&UniversalAddr<A>> for SocketAddr {
     fn from(addr: &UniversalAddr<A>) -> Self {
         match addr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => *socket_addr,
+            UniversalAddr::Direct(socket_addr) => <A as Into<SocketAddr>>::into(*socket_addr),
         }
     }
 }
 
-impl<A: Addr> From<UniversalAddr<A>> for SocketAddr {
+impl<A: Addr + Into<SocketAddr>> From<UniversalAddr<A>> for SocketAddr {
     fn from(addr: UniversalAddr<A>) -> Self {
         match addr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => socket_addr,
+            UniversalAddr::Direct(socket_addr) => socket_addr.into(),
         }
     }
 }
