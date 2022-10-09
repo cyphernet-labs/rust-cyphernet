@@ -1,8 +1,27 @@
-use std::fmt::Display;
+use std::fmt;
 use std::str::FromStr;
 
-use super::UniversalAddr;
+use super::{Addr, AddrParseError, UniversalAddr};
 use crate::crypto::{Ec, EcPubKey};
+
+#[derive(Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum PeerAddrParseError<E: Ec + fmt::Debug + ?Sized>
+where
+    E::PubKey: FromStr,
+    <E::PubKey as FromStr>::Err: std::error::Error,
+{
+    #[from]
+    #[display(inner)]
+    Addr(AddrParseError),
+
+    /// invalid peer key. Details: {0}
+    Key(<E::PubKey as FromStr>::Err),
+
+    /// invalid peer address format. Peer address must contain peer key and peer
+    /// network address, separated by '@'
+    InvalidFormat,
+}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
@@ -31,9 +50,29 @@ where
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("{pubkey}@{addr}")]
-pub struct PeerAddr<E: Ec + ?Sized, A: Display = UniversalAddr> {
+pub struct PeerAddr<E: Ec + ?Sized, A: Addr = UniversalAddr> {
     pubkey: NodeId<E>,
     addr: A,
+}
+
+impl<E: Ec + fmt::Debug + ?Sized, A: Addr> FromStr for PeerAddr<E, A>
+where
+    E::PubKey: FromStr,
+    <E::PubKey as FromStr>::Err: std::error::Error,
+    <A as FromStr>::Err: Into<PeerAddrParseError<E>>,
+{
+    type Err = PeerAddrParseError<E>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((pk, addr)) = s.split_once('@') {
+            Ok(PeerAddr {
+                pubkey: NodeId::from_str(pk).map_err(PeerAddrParseError::Key)?,
+                addr: A::from_str(addr).map_err(<A as FromStr>::Err::into)?,
+            })
+        } else {
+            Err(PeerAddrParseError::InvalidFormat)
+        }
+    }
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
