@@ -41,7 +41,14 @@ impl FromStr for HostAddr {
                 .map_err(AddrParseError::from);
         }
         // TODO: Support Num and I2P
-        Ok(HostAddr::Dns(s.to_owned()))
+        #[cfg(feature = "dns")]
+        {
+            Ok(HostAddr::Dns(s.to_owned()))
+        }
+        #[cfg(not(feature = "dns"))]
+        {
+            Err(AddrParseError::UnknownAddressFormat)
+        }
     }
 }
 
