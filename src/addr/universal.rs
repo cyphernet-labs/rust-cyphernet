@@ -1,9 +1,7 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use crate::addr::Addr;
-
-use super::ProxiedAddr;
+use super::{Addr, AddrParseError, ProxiedAddr};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
@@ -93,9 +91,12 @@ impl<A: Addr + Into<SocketAddr>> From<UniversalAddr<A>> for SocketAddr {
 }
 
 impl<A: Addr> FromStr for UniversalAddr<A> {
-    type Err = ();
+    type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        A::from_str(s)
+            .map(UniversalAddr::from)
+            .map_err(|_| AddrParseError::UnknownAddressFormat)
+            .or_else(|_| ProxiedAddr::from_str(s).map(UniversalAddr::from))
     }
 }

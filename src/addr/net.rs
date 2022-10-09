@@ -2,14 +2,14 @@ use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use super::Addr;
+use super::{Addr, AddrParseError};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[display(inner)]
 #[non_exhaustive]
 pub enum HostAddr {
     #[from]
-    Socket(IpAddr),
+    Ip(IpAddr),
 
     #[cfg(feature = "tor")]
     #[from]
@@ -17,7 +17,7 @@ pub enum HostAddr {
 
     #[cfg(feature = "i2p")]
     #[from]
-    I2P(super::i2p::I2pAddr),
+    I2p(super::i2p::I2pAddr),
 
     #[cfg(feature = "nym")]
     #[from]
@@ -28,10 +28,20 @@ pub enum HostAddr {
 }
 
 impl FromStr for HostAddr {
-    type Err = ();
+    type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        if let Ok(addr) = IpAddr::from_str(s) {
+            return Ok(HostAddr::Ip(addr));
+        }
+        #[cfg(feature = "tor")]
+        if s.ends_with(".onion") {
+            return torut::onion::OnionAddressV3::from_str(s)
+                .map(HostAddr::Tor)
+                .map_err(AddrParseError::from);
+        }
+        // TODO: Support Num and I2P
+        Ok(HostAddr::Dns(s.to_owned()))
     }
 }
 
@@ -59,9 +69,19 @@ impl<const DEFAULT_PORT: u16> fmt::Display for NetAddr<DEFAULT_PORT> {
 }
 
 impl<const DEFAULT_PORT: u16> FromStr for NetAddr<DEFAULT_PORT> {
-    type Err = ();
+    type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        if let Some((host, port)) = s.rsplit_once(':') {
+            Ok(NetAddr {
+                host: HostAddr::from_str(host)?,
+                port: Some(u16::from_str(port).map_err(|_| AddrParseError::InvalidPort)?),
+            })
+        } else {
+            Ok(NetAddr {
+                host: HostAddr::from_str(s)?,
+                port: None,
+            })
+        }
     }
 }

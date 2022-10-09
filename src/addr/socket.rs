@@ -2,7 +2,7 @@ use core::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
 
-use super::Addr;
+use super::{Addr, AddrParseError};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct SocketAddr<const DEFAULT_PORT: u16> {
@@ -33,9 +33,19 @@ impl<const DEFAULT_PORT: u16> fmt::Display for SocketAddr<DEFAULT_PORT> {
 }
 
 impl<const DEFAULT_PORT: u16> FromStr for SocketAddr<DEFAULT_PORT> {
-    type Err = ();
+    type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        if let Some((host, port)) = s.rsplit_once(':') {
+            Ok(SocketAddr {
+                ip: IpAddr::from_str(host)?,
+                port: Some(u16::from_str(port).map_err(|_| AddrParseError::InvalidPort)?),
+            })
+        } else {
+            Ok(SocketAddr {
+                ip: IpAddr::from_str(s)?,
+                port: None,
+            })
+        }
     }
 }

@@ -40,3 +40,27 @@ impl Addr for std::net::SocketAddrV6 {
         std::net::SocketAddrV6::port(self)
     }
 }
+
+#[derive(Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum AddrParseError {
+    #[from]
+    #[cfg(feature = "tor")]
+    #[display(inner)]
+    /// invalid Tor ONION address
+    Tor(torut::onion::OnionAddressParseError),
+
+    #[from]
+    #[display(inner)]
+    /// invalid IP or socket address
+    InvalidSocketAddr(std::net::AddrParseError),
+
+    /// unexpected or absent URL scheme. The address should start with '{0}'
+    InvalidUrlScheme(&'static str),
+
+    /// invalid port number
+    InvalidPort,
+
+    /// unknown network address format
+    UnknownAddressFormat,
+}

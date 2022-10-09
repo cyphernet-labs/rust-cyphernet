@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 use std::str::FromStr;
 
-use super::Addr;
+use super::{Addr, AddrParseError};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display("socks5h://{proxy_addr}/{remote_addr}")]
@@ -29,9 +29,20 @@ impl<A: Addr> From<ProxiedAddr<A>> for SocketAddr {
 }
 
 impl<A: Addr> FromStr for ProxiedAddr<A> {
-    type Err = ();
+    type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        if !s.starts_with("socks5h://") {
+            return Err(AddrParseError::InvalidUrlScheme("socks5h://"));
+        }
+        if let Some((proxy, remote)) = s[10..].split_once('/') {
+            Ok(ProxiedAddr {
+                proxy_addr: SocketAddr::from_str(proxy)?,
+                remote_addr: A::from_str(remote)
+                    .map_err(|_| AddrParseError::UnknownAddressFormat)?,
+            })
+        } else {
+            return Err(AddrParseError::UnknownAddressFormat);
+        }
     }
 }
