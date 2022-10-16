@@ -1,5 +1,5 @@
 use core::fmt;
-use std::net::IpAddr;
+use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError};
@@ -8,6 +8,22 @@ use super::{Addr, AddrParseError};
 pub struct SocketAddr<const DEFAULT_PORT: u16> {
     pub ip: IpAddr,
     pub port: Option<u16>,
+}
+
+impl<const DEFAULT_PORT: u16> SocketAddr<DEFAULT_PORT> {
+    pub fn localhost() -> Self {
+        Self {
+            ip: Ipv4Addr::LOCALHOST.into(),
+            port: None
+        }
+    }
+
+    pub fn unspecified() -> Self {
+        Self {
+            ip: Ipv4Addr::UNSPECIFIED.into(),
+            port: None
+        }
+    }
 }
 
 impl<const DEFAULT_PORT: u16> Addr for SocketAddr<DEFAULT_PORT> {

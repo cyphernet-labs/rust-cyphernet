@@ -1,13 +1,15 @@
-use ed25519::{PublicKey, SecretKey};
+use ::ed25519::{PublicKey, SecretKey};
 
 use super::*;
 
 pub struct Curve25519;
 
+pub type SharedSecret = [u8; 32];
+
 impl Ec for Curve25519 {
     type PubKey = PublicKey;
     type PrivKey = SecretKey;
-    type EcdhSecret = [u8; 32];
+    type EcdhSecret = SharedSecret;
 }
 
 impl EcPubKey<Curve25519> for PublicKey {
@@ -21,7 +23,7 @@ impl EcPubKey<Curve25519> for PublicKey {
         todo!()
     }
 
-    fn ecdh(self, sk: crate::crypto::PrivKey) -> crate::crypto::EcdhSecret {
+    fn ecdh(self, sk: SecretKey) -> SharedSecret {
         todo!()
     }
 
@@ -41,7 +43,7 @@ impl EcPrivKey<Curve25519> for SecretKey {
         todo!()
     }
 
-    fn ecdh(self, pk: crate::crypto::PubKey) -> crate::crypto::EcdhSecret {
+    fn ecdh(self, pk: PublicKey) -> SharedSecret {
         todo!()
     }
 
