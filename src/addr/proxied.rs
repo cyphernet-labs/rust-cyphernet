@@ -1,5 +1,6 @@
-use std::net;
+use std::net::ToSocketAddrs;
 use std::str::FromStr;
+use std::{io, net, option};
 
 use super::{PeerAddr, SocketAddr};
 use crate::crypto::Ec;
@@ -28,6 +29,26 @@ impl<A: Addr> From<&ProxiedAddr<A>> for net::SocketAddr {
 impl<A: Addr> From<ProxiedAddr<A>> for net::SocketAddr {
     fn from(addr: ProxiedAddr<A>) -> Self {
         addr.proxy_addr
+    }
+}
+
+impl<A> ProxiedAddr<A>
+where
+    A: Addr,
+{
+    pub fn to_socket_addr(&self) -> net::SocketAddr {
+        self.proxy_addr
+    }
+}
+
+impl<A> ToSocketAddrs for ProxiedAddr<A>
+where
+    A: Addr,
+{
+    type Iter = option::IntoIter<net::SocketAddr>;
+
+    fn to_socket_addrs(&self) -> io::Result<option::IntoIter<net::SocketAddr>> {
+        Ok(Some(self.to_socket_addr()).into_iter())
     }
 }
 

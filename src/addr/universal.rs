@@ -1,5 +1,6 @@
-use std::net;
+use std::net::ToSocketAddrs;
 use std::str::FromStr;
+use std::{io, net, option};
 
 use super::{PeerAddr, SocketAddr};
 use crate::crypto::Ec;
@@ -75,11 +76,15 @@ impl<A: Addr> Addr for UniversalAddr<A> {
     }
 }
 
-impl<A: Addr + Into<net::SocketAddr> + Copy> From<&UniversalAddr<A>> for net::SocketAddr {
-    fn from(addr: &UniversalAddr<A>) -> Self {
+impl<'a, A> From<&'a UniversalAddr<A>> for net::SocketAddr
+where
+    A: Addr + 'a,
+    &'a A: Into<net::SocketAddr>,
+{
+    fn from(addr: &'a UniversalAddr<A>) -> Self {
         match addr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => <A as Into<net::SocketAddr>>::into(*socket_addr),
+            UniversalAddr::Direct(socket_addr) => socket_addr.into(),
         }
     }
 }
@@ -90,6 +95,29 @@ impl<A: Addr + Into<net::SocketAddr>> From<UniversalAddr<A>> for net::SocketAddr
             UniversalAddr::Proxied(proxied) => proxied.into(),
             UniversalAddr::Direct(socket_addr) => socket_addr.into(),
         }
+    }
+}
+
+impl<A> UniversalAddr<A>
+where
+    A: Addr + Copy + Into<net::SocketAddr>,
+{
+    pub fn to_socket_addr(&self) -> net::SocketAddr {
+        match self {
+            UniversalAddr::Proxied(proxied) => proxied.to_socket_addr(),
+            UniversalAddr::Direct(socket_addr) => (*socket_addr).into(),
+        }
+    }
+}
+
+impl<A> ToSocketAddrs for UniversalAddr<A>
+where
+    A: Addr + Copy + Into<net::SocketAddr>,
+{
+    type Iter = option::IntoIter<net::SocketAddr>;
+
+    fn to_socket_addrs(&self) -> io::Result<option::IntoIter<net::SocketAddr>> {
+        Ok(Some(self.to_socket_addr()).into_iter())
     }
 }
 

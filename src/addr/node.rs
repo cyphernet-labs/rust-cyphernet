@@ -1,7 +1,8 @@
 use crate::addr::SocketAddr;
-use std::fmt;
 use std::net;
+use std::net::ToSocketAddrs;
 use std::str::FromStr;
+use std::{fmt, io, option};
 
 use super::{Addr, AddrParseError, UniversalAddr};
 use crate::crypto::{Ec, EcPrivKey, EcPubKey};
@@ -101,6 +102,33 @@ impl<E: Ec + ?Sized, const DEFAULT_PORT: u16> From<PeerAddr<E, SocketAddr<DEFAUL
             addr: peer.addr.into(),
             pubkey: peer.pubkey,
         }
+    }
+}
+
+impl<E: Ec + ?Sized, A: Addr + Into<net::SocketAddr>> From<PeerAddr<E, A>> for net::SocketAddr {
+    fn from(peer: PeerAddr<E, A>) -> Self {
+        peer.addr.into()
+    }
+}
+
+impl<'a, E: Ec + ?Sized, A> PeerAddr<E, A>
+where
+    A: Addr + 'a,
+    &'a A: Into<net::SocketAddr>,
+{
+    pub fn to_socket_addr(&'a self) -> net::SocketAddr {
+        (&self.addr).into()
+    }
+}
+
+impl<E: Ec + ?Sized, A> ToSocketAddrs for PeerAddr<E, A>
+where
+    A: Addr + ToSocketAddrs,
+{
+    type Iter = A::Iter;
+
+    fn to_socket_addrs(&self) -> io::Result<A::Iter> {
+        self.addr.to_socket_addrs()
     }
 }
 
