@@ -6,7 +6,12 @@
 
 #[macro_use]
 extern crate amplify_derive;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
 extern crate core;
 
 pub mod addr;
 pub mod crypto;
+#[cfg(test)]
+mod test;

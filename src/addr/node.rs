@@ -1,4 +1,5 @@
 use std::fmt;
+use std::net;
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
@@ -12,6 +13,7 @@ where
     <E::PubKey as FromStr>::Err: std::error::Error,
 {
     #[from]
+    #[from(net::AddrParseError)]
     #[display(inner)]
     Addr(AddrParseError),
 
@@ -25,15 +27,15 @@ where
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[display(inner)]
-pub struct NodeId<E: Ec + ?Sized>(<E::PubKey as EcPubKey<E>>::Raw);
+pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
 
 impl<E: Ec + ?Sized> NodeId<E> {
     pub fn from_raw(raw: <E::PubKey as EcPubKey<E>>::Raw) -> Self {
-        Self(raw)
+        Self(E::PubKey::from_raw(raw))
     }
 
     pub fn into_raw(self) -> <E::PubKey as EcPubKey<E>>::Raw {
-        self.0
+        self.0.into_raw()
     }
 }
 
@@ -44,7 +46,7 @@ where
     type Err = <E::PubKey as FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        E::PubKey::from_str(s).map(E::PubKey::into_raw).map(Self)
+        E::PubKey::from_str(s).map(Self)
     }
 }
 
