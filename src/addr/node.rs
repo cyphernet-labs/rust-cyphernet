@@ -3,7 +3,7 @@ use std::net;
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
-use crate::crypto::{Ec, EcPubKey};
+use crate::crypto::{Ec, EcPrivKey, EcPubKey};
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -30,6 +30,10 @@ where
 pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
 
 impl<E: Ec + ?Sized> NodeId<E> {
+    pub fn from_public_key(pk: E::PubKey) -> Self {
+        Self(pk)
+    }
+
     pub fn from_raw(raw: <E::PubKey as EcPubKey<E>>::Raw) -> Self {
         Self(E::PubKey::from_raw(raw))
     }
@@ -92,4 +96,22 @@ where
 pub struct LocalNode<E: Ec + ?Sized> {
     privkey: E::PrivKey,
     pubkey: E::PubKey,
+}
+
+impl<E: Ec + ?Sized> LocalNode<E> {
+    pub fn from(sk: E::PrivKey) -> Self {
+        let pk = sk.to_public_key();
+        LocalNode {
+            privkey: sk,
+            pubkey: pk,
+        }
+    }
+
+    pub fn id(self) -> NodeId<E> {
+        NodeId::from_public_key(self.pubkey)
+    }
+
+    pub fn private_key(self) -> E::PrivKey {
+        self.privkey
+    }
 }

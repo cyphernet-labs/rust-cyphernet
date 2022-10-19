@@ -40,7 +40,7 @@ impl<A: Addr> UniversalAddr<A> {
 
     pub fn try_proxy(self, proxy_addr: SocketAddr) -> Result<Self, ProxyError> {
         match self {
-            UniversalAddr::Proxied(mut addr) => Err(ProxyError::ProxyPresent),
+            UniversalAddr::Proxied(_) => Err(ProxyError::ProxyPresent),
             UniversalAddr::Direct(remote_addr) => Ok(UniversalAddr::Proxied(ProxiedAddr {
                 proxy_addr,
                 remote_addr,

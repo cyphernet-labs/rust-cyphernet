@@ -146,7 +146,7 @@ impl EcPubKey<Curve25519> for PublicKey {
         *self.0.deref()
     }
 
-    fn ecdh(self, sk: PrivateKey) -> Result<SharedSecret, ::ed25519::Error> {
+    fn ecdh(self, sk: &PrivateKey) -> Result<SharedSecret, ::ed25519::Error> {
         let xpk = x25519::PublicKey::from_ed25519(&self.0)?;
         let xsk = x25519::SecretKey::from_ed25519(&sk.0)?;
         let ss = xpk.dh(&xsk)?;
@@ -180,7 +180,19 @@ impl EcPrivKey<Curve25519> for PrivateKey {
         *self.0.deref()
     }
 
-    fn ecdh(self, pk: PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
+    fn to_raw(&self) -> Self::Raw {
+        *self.0.deref()
+    }
+
+    fn as_raw(&self) -> &Self::Raw {
+        self.0.deref()
+    }
+
+    fn to_public_key(&self) -> PublicKey {
+        self.0.public_key().into()
+    }
+
+    fn ecdh(&self, pk: PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
         let xpk = x25519::PublicKey::from_ed25519(&pk.0)?;
         let xsk = x25519::SecretKey::from_ed25519(&self.0)?;
         let ss = xpk.dh(&xsk)?;

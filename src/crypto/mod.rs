@@ -17,7 +17,7 @@ pub trait EcPubKey<C: Ec + ?Sized>: Copy + Eq + Ord + Hash + Debug + Display {
     fn from_raw(raw: Self::Raw) -> Self;
     fn into_raw(self) -> Self::Raw;
 
-    fn ecdh(self, sk: C::PrivKey) -> Result<C::EcdhSecret, C::EcdhErr>;
+    fn ecdh(self, sk: &C::PrivKey) -> Result<C::EcdhSecret, C::EcdhErr>;
 }
 
 pub trait EcPrivKey<C: Ec + ?Sized>: Eq + Ord + Hash + Debug {
@@ -25,8 +25,12 @@ pub trait EcPrivKey<C: Ec + ?Sized>: Eq + Ord + Hash + Debug {
 
     fn from_raw(raw: Self::Raw) -> Self;
     fn into_raw(self) -> Self::Raw;
+    fn to_raw(&self) -> Self::Raw;
+    fn as_raw(&self) -> &Self::Raw;
 
-    fn ecdh(self, pk: C::PubKey) -> Result<C::EcdhSecret, C::EcdhErr>;
+    fn to_public_key(&self) -> C::PubKey;
+
+    fn ecdh(&self, pk: C::PubKey) -> Result<C::EcdhSecret, C::EcdhErr>;
 }
 
 pub trait EcSig<C: Ec + ?Sized>: Copy + Eq + Hash + Debug + Display {
