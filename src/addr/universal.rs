@@ -1,11 +1,14 @@
-use std::net::SocketAddr;
+use std::net;
 use std::str::FromStr;
+
+use super::{PeerAddr, SocketAddr};
+use crate::crypto::Ec;
 
 use super::{Addr, AddrParseError, ProxiedAddr};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
-pub enum UniversalAddr<A: Addr = SocketAddr> {
+pub enum UniversalAddr<A: Addr = net::SocketAddr> {
     #[from]
     Proxied(ProxiedAddr<A>),
 
@@ -25,7 +28,7 @@ impl<A: Addr> UniversalAddr<A> {
         matches!(self, UniversalAddr::Proxied(_))
     }
 
-    pub fn replace_proxy(self, proxy_addr: SocketAddr) -> Self {
+    pub fn replace_proxy(self, proxy_addr: net::SocketAddr) -> Self {
         match self {
             UniversalAddr::Proxied(mut addr) => {
                 addr.proxy_addr = proxy_addr;
@@ -38,7 +41,7 @@ impl<A: Addr> UniversalAddr<A> {
         }
     }
 
-    pub fn try_proxy(self, proxy_addr: SocketAddr) -> Result<Self, ProxyError> {
+    pub fn try_proxy(self, proxy_addr: net::SocketAddr) -> Result<Self, ProxyError> {
         match self {
             UniversalAddr::Proxied(_) => Err(ProxyError::ProxyPresent),
             UniversalAddr::Direct(remote_addr) => Ok(UniversalAddr::Proxied(ProxiedAddr {
@@ -72,20 +75,46 @@ impl<A: Addr> Addr for UniversalAddr<A> {
     }
 }
 
-impl<A: Addr + Into<SocketAddr> + Copy> From<&UniversalAddr<A>> for SocketAddr {
+impl<A: Addr + Into<net::SocketAddr> + Copy> From<&UniversalAddr<A>> for net::SocketAddr {
     fn from(addr: &UniversalAddr<A>) -> Self {
         match addr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => <A as Into<SocketAddr>>::into(*socket_addr),
+            UniversalAddr::Direct(socket_addr) => <A as Into<net::SocketAddr>>::into(*socket_addr),
         }
     }
 }
 
-impl<A: Addr + Into<SocketAddr>> From<UniversalAddr<A>> for SocketAddr {
+impl<A: Addr + Into<net::SocketAddr>> From<UniversalAddr<A>> for net::SocketAddr {
     fn from(addr: UniversalAddr<A>) -> Self {
         match addr {
             UniversalAddr::Proxied(proxied) => proxied.into(),
             UniversalAddr::Direct(socket_addr) => socket_addr.into(),
+        }
+    }
+}
+
+impl<const DEFAULT_PORT: u16> From<UniversalAddr<SocketAddr<DEFAULT_PORT>>>
+    for UniversalAddr<net::SocketAddr>
+{
+    fn from(ua: UniversalAddr<SocketAddr<DEFAULT_PORT>>) -> Self {
+        match ua {
+            UniversalAddr::Proxied(addr) => UniversalAddr::Proxied(addr.into()),
+            UniversalAddr::Direct(addr) => UniversalAddr::Direct(addr.into()),
+        }
+    }
+}
+
+impl<E: Ec + ?Sized, const DEFAULT_PORT: u16>
+    From<UniversalAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>>
+    for UniversalAddr<PeerAddr<E, net::SocketAddr>>
+where
+    <E as Ec>::PubKey: FromStr,
+    <<E as Ec>::PubKey as FromStr>::Err: std::error::Error,
+{
+    fn from(ua: UniversalAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>) -> Self {
+        match ua {
+            UniversalAddr::Proxied(addr) => UniversalAddr::Proxied(addr.into()),
+            UniversalAddr::Direct(addr) => UniversalAddr::Direct(addr.into()),
         }
     }
 }

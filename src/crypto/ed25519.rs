@@ -18,13 +18,13 @@ impl Ec for Curve25519 {
     type EcdhErr = ::ed25519::Error;
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(into = "String", try_from = "String")
 )]
-pub struct PublicKey(::ed25519::PublicKey);
+pub struct PublicKey(#[from] ::ed25519::PublicKey);
 
 impl PartialOrd for PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -58,12 +58,6 @@ impl PublicKey {
 
     pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
         ::ed25519::PublicKey::from_pem(pem).map(Self)
-    }
-}
-
-impl From<::ed25519::PublicKey> for PublicKey {
-    fn from(other: ::ed25519::PublicKey) -> Self {
-        Self(other)
     }
 }
 
@@ -154,8 +148,8 @@ impl EcPubKey<Curve25519> for PublicKey {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug)]
-pub struct PrivateKey(::ed25519::SecretKey);
+#[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
+pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {

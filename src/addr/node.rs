@@ -1,3 +1,4 @@
+use crate::addr::SocketAddr;
 use std::fmt;
 use std::net;
 use std::str::FromStr;
@@ -88,6 +89,17 @@ where
             })
         } else {
             Err(PeerAddrParseError::InvalidFormat)
+        }
+    }
+}
+
+impl<E: Ec + ?Sized, const DEFAULT_PORT: u16> From<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>
+    for PeerAddr<E, net::SocketAddr>
+{
+    fn from(peer: PeerAddr<E, SocketAddr<DEFAULT_PORT>>) -> Self {
+        PeerAddr {
+            addr: peer.addr.into(),
+            pubkey: peer.pubkey,
         }
     }
 }
