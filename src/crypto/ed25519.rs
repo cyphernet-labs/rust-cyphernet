@@ -1,4 +1,5 @@
 use ::ed25519::x25519;
+use rand::RngCore;
 use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::ops::Deref;
@@ -191,6 +192,15 @@ impl EcPrivKey<Curve25519> for PrivateKey {
         let xsk = x25519::SecretKey::from_ed25519(&self.0)?;
         let ss = xpk.dh(&xsk)?;
         Ok(*ss)
+    }
+}
+
+impl PrivateKey {
+    #[cfg(feature = "rand")]
+    pub fn test() -> Self {
+        let mut key = [0u8; 64];
+        rand::thread_rng().fill_bytes(&mut key);
+        ::ed25519::SecretKey::new(key).into()
     }
 }
 
