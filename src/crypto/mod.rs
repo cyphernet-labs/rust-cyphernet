@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::ops::{Add, AddAssign};
 
-pub trait Ec: Debug {
+pub trait Ec: Copy + Clone + Eq + Ord + Hash + Debug {
     type PubKey: EcPubKey<Self>;
     type PrivKey: EcPrivKey<Self>;
     type EcdhSecret: Copy;

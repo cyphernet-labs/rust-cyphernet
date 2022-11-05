@@ -6,7 +6,8 @@ use std::str::FromStr;
 
 use super::*;
 
-#[derive(Copy, Clone, Debug)]
+// Derivations required for automatic derivations of other types
+#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
 pub struct Curve25519;
 
 pub type SharedSecret = [u8; 32];
