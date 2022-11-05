@@ -1,14 +1,14 @@
-use std::net::ToSocketAddrs;
+use std::fmt::{self, Display, Formatter};
+use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
-use std::{io, net, option};
+use std::{io, option};
 
 use super::{PeerAddr, SocketAddr};
 use crate::crypto::Ec;
 
 use super::{Addr, AddrParseError};
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display("socks5h://{proxy_addr}/{remote_addr}")]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct ProxiedAddr<A: Addr = net::SocketAddr> {
     pub proxy_addr: net::SocketAddr,
     pub remote_addr: A,
@@ -66,9 +66,6 @@ impl<const DEFAULT_PORT: u16> From<ProxiedAddr<SocketAddr<DEFAULT_PORT>>>
 impl<E: Ec + ?Sized, const DEFAULT_PORT: u16>
     From<ProxiedAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>>
     for ProxiedAddr<PeerAddr<E, net::SocketAddr>>
-where
-    <E as Ec>::PubKey: FromStr,
-    <<E as Ec>::PubKey as FromStr>::Err: std::error::Error,
 {
     fn from(addr: ProxiedAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>) -> Self {
         ProxiedAddr {
@@ -78,7 +75,13 @@ where
     }
 }
 
-impl<A: Addr> FromStr for ProxiedAddr<A> {
+impl<A: Addr + Display> Display for ProxiedAddr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "socks5h://{}/{}", self.proxy_addr, self.remote_addr)
+    }
+}
+
+impl<A: Addr + FromStr> FromStr for ProxiedAddr<A> {
     type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

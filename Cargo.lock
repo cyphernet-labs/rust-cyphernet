@@ -138,7 +138,6 @@ name = "cyphernet"
 version = "0.1.0"
 dependencies = [
  "amplify_derive",
- "data-encoding",
  "ed25519-compact",
  "multibase",
  "quickcheck",

@@ -1,16 +1,16 @@
-use crate::addr::SocketAddr;
 use std::borrow::Borrow;
-use std::net;
-use std::net::ToSocketAddrs;
+use std::fmt::{self, Debug, Display, Formatter};
+use std::io;
+use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
-use std::{fmt, io};
 
 use super::{Addr, AddrParseError, UniversalAddr};
+use crate::addr::SocketAddr;
 use crate::crypto::{Ec, EcPrivKey, EcPubKey};
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
-pub enum PeerAddrParseError<E: Ec + fmt::Debug + ?Sized>
+pub enum PeerAddrParseError<E: Ec + Debug + ?Sized>
 where
     E::PubKey: FromStr,
     <E::PubKey as FromStr>::Err: std::error::Error,
@@ -28,8 +28,7 @@ where
     InvalidFormat,
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[display(inner)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
 
 impl<E: Ec + ?Sized> AsRef<E::PubKey> for NodeId<E> {
@@ -52,6 +51,15 @@ impl<E: Ec + ?Sized> NodeId<E> {
     }
 }
 
+impl<E: Ec + ?Sized> Display for NodeId<E>
+where
+    E::PubKey: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
 impl<E: Ec + ?Sized> FromStr for NodeId<E>
 where
     E::PubKey: FromStr,
@@ -63,9 +71,8 @@ where
     }
 }
 
-#[derive(Getters, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(Getters, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[getter(as_copy)]
-#[display("{id}@{addr}")]
 pub struct PeerAddr<E: Ec + ?Sized, A: Addr = UniversalAddr> {
     id: NodeId<E>,
     addr: A,
@@ -83,21 +90,27 @@ impl<E: Ec + ?Sized, A: Addr> AsRef<E::PubKey> for PeerAddr<E, A> {
     }
 }
 
-impl<E: Ec + fmt::Debug + ?Sized, A: Addr> Addr for PeerAddr<E, A>
-where
-    E::PubKey: FromStr,
-    <E::PubKey as FromStr>::Err: std::error::Error,
-    <A as FromStr>::Err: Into<PeerAddrParseError<E>>,
-{
+impl<E: Ec + ?Sized, A: Addr> Addr for PeerAddr<E, A> {
     fn port(&self) -> u16 {
         self.addr.port()
     }
 }
 
-impl<E: Ec + fmt::Debug + ?Sized, A: Addr> FromStr for PeerAddr<E, A>
+impl<E: Ec + ?Sized, A: Addr> Display for PeerAddr<E, A>
+where
+    E::PubKey: Display,
+    A: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}@{}", self.id, self.addr)
+    }
+}
+
+impl<E: Ec + ?Sized, A: Addr> FromStr for PeerAddr<E, A>
 where
     E::PubKey: FromStr,
     <E::PubKey as FromStr>::Err: std::error::Error,
+    A: FromStr,
     <A as FromStr>::Err: Into<PeerAddrParseError<E>>,
 {
     type Err = PeerAddrParseError<E>;

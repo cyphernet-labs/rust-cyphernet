@@ -1,3 +1,4 @@
+use std::fmt::{self, Display, Formatter};
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
 use std::{io, net, option};
@@ -7,8 +8,7 @@ use crate::crypto::Ec;
 
 use super::{Addr, AddrParseError, ProxiedAddr};
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
-#[display(inner)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 pub enum UniversalAddr<A: Addr = net::SocketAddr> {
     #[from]
     Proxied(ProxiedAddr<A>),
@@ -147,7 +147,16 @@ where
     }
 }
 
-impl<A: Addr> FromStr for UniversalAddr<A> {
+impl<A: Addr + Display> Display for UniversalAddr<A> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            UniversalAddr::Proxied(addr) => Display::fmt(addr, f),
+            UniversalAddr::Direct(addr) => Display::fmt(addr, f),
+        }
+    }
+}
+
+impl<A: Addr + FromStr> FromStr for UniversalAddr<A> {
     type Err = AddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

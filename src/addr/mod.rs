@@ -16,7 +16,7 @@ pub use proxied::ProxiedAddr;
 pub use socket::SocketAddr;
 pub use universal::{ProxyError, UniversalAddr};
 
-pub trait Addr: std::fmt::Display + std::str::FromStr {
+pub trait Addr {
     fn port(&self) -> u16;
 }
 
