@@ -78,13 +78,12 @@ impl<A: Addr> Addr for UniversalAddr<A> {
 
 impl<'a, A> From<&'a UniversalAddr<A>> for net::SocketAddr
 where
-    A: Addr + 'a,
-    &'a A: Into<net::SocketAddr>,
+    A: Addr + Clone + Into<net::SocketAddr>,
 {
     fn from(addr: &'a UniversalAddr<A>) -> Self {
         match addr {
-            UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => socket_addr.into(),
+            UniversalAddr::Proxied(proxied) => proxied.clone().into(),
+            UniversalAddr::Direct(socket_addr) => socket_addr.clone().into(),
         }
     }
 }
