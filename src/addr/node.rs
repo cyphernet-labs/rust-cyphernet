@@ -145,6 +145,13 @@ impl<E: Ec + ?Sized, A: Addr + Into<net::SocketAddr>> From<PeerAddr<E, A>> for n
 }
 
 impl<E: Ec + ?Sized, A: Addr> PeerAddr<E, A> {
+    pub fn with(id: NodeId<E>, addr: impl Into<A>) -> Self {
+        PeerAddr {
+            id,
+            addr: addr.into(),
+        }
+    }
+
     pub fn to_pubkey(&self) -> E::PubKey {
         self.id.0
     }
