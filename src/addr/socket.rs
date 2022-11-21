@@ -5,6 +5,7 @@ use std::str::FromStr;
 use super::{Addr, AddrParseError};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SocketAddr<const DEFAULT_PORT: u16> {
     pub ip: IpAddr,
     pub port: Option<u16>,
@@ -14,14 +15,14 @@ impl<const DEFAULT_PORT: u16> SocketAddr<DEFAULT_PORT> {
     pub fn localhost() -> Self {
         Self {
             ip: Ipv4Addr::LOCALHOST.into(),
-            port: None
+            port: None,
         }
     }
 
     pub fn unspecified() -> Self {
         Self {
             ip: Ipv4Addr::UNSPECIFIED.into(),
-            port: None
+            port: None,
         }
     }
 }

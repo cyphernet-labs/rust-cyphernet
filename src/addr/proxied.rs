@@ -9,6 +9,7 @@ use crate::crypto::Ec;
 use super::{Addr, AddrParseError};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ProxiedAddr<A: Addr = net::SocketAddr> {
     pub proxy_addr: net::SocketAddr,
     pub remote_addr: A,

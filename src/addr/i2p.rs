@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct I2pAddr([u8; 32]);
 
 impl FromStr for I2pAddr {

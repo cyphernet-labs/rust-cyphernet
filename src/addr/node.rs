@@ -30,6 +30,7 @@ where
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
 
 impl<E: Ec + ?Sized> Deref for NodeId<E> {

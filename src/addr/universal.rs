@@ -9,6 +9,7 @@ use crate::crypto::Ec;
 use super::{Addr, AddrParseError, ProxiedAddr};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum UniversalAddr<A: Addr = net::SocketAddr> {
     #[from]
     Proxied(ProxiedAddr<A>),

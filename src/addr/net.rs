@@ -5,6 +5,7 @@ use std::str::FromStr;
 use super::{Addr, AddrParseError};
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]
 #[non_exhaustive]
 pub enum HostAddr {
@@ -53,6 +54,7 @@ impl FromStr for HostAddr {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub struct NetAddr<const DEFAULT_PORT: u16> {
     pub host: HostAddr,
