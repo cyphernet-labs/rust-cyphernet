@@ -4,7 +4,6 @@ use std::str::FromStr;
 use std::{io, net, option};
 
 use super::{PeerAddr, SocketAddr};
-use crate::crypto::Ec;
 
 use super::{Addr, AddrParseError, ProxiedAddr};
 
@@ -132,14 +131,13 @@ impl<const DEFAULT_PORT: u16> From<UniversalAddr<SocketAddr<DEFAULT_PORT>>>
     }
 }
 
-impl<E: Ec + ?Sized, const DEFAULT_PORT: u16>
-    From<UniversalAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>>
-    for UniversalAddr<PeerAddr<E, net::SocketAddr>>
+impl<Id, const DEFAULT_PORT: u16> From<UniversalAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
+    for UniversalAddr<PeerAddr<Id, net::SocketAddr>>
 where
-    <E as Ec>::PubKey: FromStr,
-    <<E as Ec>::PubKey as FromStr>::Err: std::error::Error,
+    Id: FromStr,
+    <Id as FromStr>::Err: std::error::Error,
 {
-    fn from(ua: UniversalAddr<PeerAddr<E, SocketAddr<DEFAULT_PORT>>>) -> Self {
+    fn from(ua: UniversalAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>) -> Self {
         match ua {
             UniversalAddr::Proxied(addr) => UniversalAddr::Proxied(addr.into()),
             UniversalAddr::Direct(addr) => UniversalAddr::Direct(addr.into()),
