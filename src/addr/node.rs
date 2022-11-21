@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io;
 use std::net::{self, ToSocketAddrs};
+use std::ops::Deref;
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
@@ -30,6 +31,14 @@ where
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
+
+impl<E: Ec + ?Sized> Deref for NodeId<E> {
+    type Target = E::PubKey;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl<E: Ec + ?Sized> AsRef<E::PubKey> for NodeId<E> {
     fn as_ref(&self) -> &E::PubKey {
