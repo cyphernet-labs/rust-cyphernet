@@ -1,6 +1,6 @@
-use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
+use std::{fmt, net};
 
 use super::{Addr, AddrParseError};
 
@@ -55,7 +55,6 @@ impl FromStr for HostAddr {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[non_exhaustive]
 pub struct NetAddr<const DEFAULT_PORT: u16> {
     pub host: HostAddr,
     pub port: Option<u16>,
