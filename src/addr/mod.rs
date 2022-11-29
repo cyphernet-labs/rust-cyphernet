@@ -10,7 +10,7 @@ mod proxied;
 mod socket;
 mod universal;
 
-pub use net::HostAddr;
+pub use net::{HostAddr, NetAddr};
 pub use node::{LocalNode, NodeId, PeerAddr, PeerAddrParseError};
 pub use proxied::ProxiedAddr;
 pub use socket::SocketAddr;
