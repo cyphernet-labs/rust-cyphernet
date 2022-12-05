@@ -88,6 +88,12 @@ pub struct PeerAddr<Id, A: Addr = UniversalAddr> {
     addr: A,
 }
 
+impl<Id, A: Addr> PeerAddr<Id, A> {
+    pub fn new(id: Id, addr: A) -> Self {
+        Self { id, addr }
+    }
+}
+
 impl<Id, A: Addr> Borrow<Id> for PeerAddr<Id, A> {
     fn borrow(&self) -> &Id {
         &self.id
