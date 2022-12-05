@@ -21,7 +21,7 @@ pub trait EcPubKey<C: Ec + ?Sized>: Copy + Eq + Ord + Hash + Debug + Display {
     fn ecdh(self, sk: &C::PrivKey) -> Result<C::EcdhSecret, C::EcdhErr>;
 }
 
-pub trait EcPrivKey<C: Ec + ?Sized>: Eq + Ord + Hash + Debug {
+pub trait EcPrivKey<C: Ec + ?Sized>: Clone + Eq + Ord + Hash + Debug {
     type Raw: Copy;
 
     fn from_raw(raw: Self::Raw) -> Self;
