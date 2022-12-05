@@ -211,11 +211,11 @@ impl<E: Ec + ?Sized> LocalNode<E> {
         }
     }
 
-    pub fn id(self) -> NodeId<E> {
+    pub fn id(&self) -> NodeId<E> {
         NodeId::from_public_key(self.pubkey)
     }
 
-    pub fn private_key(self) -> E::PrivKey {
-        self.privkey
+    pub fn private_key(&self) -> &E::PrivKey {
+        &self.privkey
     }
 }
