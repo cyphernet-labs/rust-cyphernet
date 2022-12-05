@@ -74,25 +74,11 @@ impl<A: Addr> Addr for UniversalAddr<A> {
             UniversalAddr::Direct(socket) => socket.port(),
         }
     }
-}
 
-impl<'a, A> From<&'a UniversalAddr<A>> for net::SocketAddr
-where
-    A: Addr + Clone + Into<net::SocketAddr>,
-{
-    fn from(addr: &'a UniversalAddr<A>) -> Self {
-        match addr {
-            UniversalAddr::Proxied(proxied) => proxied.clone().into(),
-            UniversalAddr::Direct(socket_addr) => socket_addr.clone().into(),
-        }
-    }
-}
-
-impl<A: Addr + Into<net::SocketAddr>> From<UniversalAddr<A>> for net::SocketAddr {
-    fn from(addr: UniversalAddr<A>) -> Self {
-        match addr {
-            UniversalAddr::Proxied(proxied) => proxied.into(),
-            UniversalAddr::Direct(socket_addr) => socket_addr.into(),
+    fn to_socket_addr(&self) -> net::SocketAddr {
+        match self {
+            UniversalAddr::Proxied(proxied) => proxied.to_socket_addr(),
+            UniversalAddr::Direct(addr) => addr.to_socket_addr(),
         }
     }
 }

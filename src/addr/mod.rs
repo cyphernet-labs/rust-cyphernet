@@ -18,6 +18,8 @@ pub use universal::{ProxyError, UniversalAddr};
 
 pub trait Addr {
     fn port(&self) -> u16;
+
+    fn to_socket_addr(&self) -> std::net::SocketAddr;
 }
 
 impl Addr for std::net::SocketAddr {
@@ -27,17 +29,29 @@ impl Addr for std::net::SocketAddr {
             std::net::SocketAddr::V6(v6) => v6.port(),
         }
     }
+
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        *self
+    }
 }
 
 impl Addr for std::net::SocketAddrV4 {
     fn port(&self) -> u16 {
         std::net::SocketAddrV4::port(self)
     }
+
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        std::net::SocketAddr::V4(*self)
+    }
 }
 
 impl Addr for std::net::SocketAddrV6 {
     fn port(&self) -> u16 {
         std::net::SocketAddrV6::port(self)
+    }
+
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        std::net::SocketAddr::V6(*self)
     }
 }
 

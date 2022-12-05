@@ -110,6 +110,10 @@ impl<Id, A: Addr> Addr for PeerAddr<Id, A> {
     fn port(&self) -> u16 {
         self.addr.port()
     }
+
+    fn to_socket_addr(&self) -> net::SocketAddr {
+        self.addr.to_socket_addr()
+    }
 }
 
 impl<Id, A: Addr> Display for PeerAddr<Id, A>
@@ -172,16 +176,6 @@ impl<Id, A: Addr> PeerAddr<Id, A> {
 impl<E: Ec + ?Sized, A: Addr> PeerAddr<NodeId<E>, A> {
     pub fn to_pubkey(&self) -> E::PubKey {
         self.id.0
-    }
-}
-
-impl<'a, Id, A> PeerAddr<Id, A>
-where
-    A: Addr + 'a,
-    &'a A: Into<net::SocketAddr>,
-{
-    pub fn to_socket_addr(&'a self) -> net::SocketAddr {
-        (&self.addr).into()
     }
 }
 

@@ -18,25 +18,8 @@ impl<A: Addr> Addr for ProxiedAddr<A> {
     fn port(&self) -> u16 {
         self.remote_addr.port()
     }
-}
 
-impl<A: Addr> From<&ProxiedAddr<A>> for net::SocketAddr {
-    fn from(addr: &ProxiedAddr<A>) -> Self {
-        addr.proxy_addr
-    }
-}
-
-impl<A: Addr> From<ProxiedAddr<A>> for net::SocketAddr {
-    fn from(addr: ProxiedAddr<A>) -> Self {
-        addr.proxy_addr
-    }
-}
-
-impl<A> ProxiedAddr<A>
-where
-    A: Addr,
-{
-    pub fn to_socket_addr(&self) -> net::SocketAddr {
+    fn to_socket_addr(&self) -> net::SocketAddr {
         self.proxy_addr
     }
 }

@@ -1,4 +1,5 @@
 use core::fmt;
+use std::net;
 use std::net::{IpAddr, Ipv4Addr};
 use std::str::FromStr;
 
@@ -31,11 +32,15 @@ impl<const DEFAULT_PORT: u16> Addr for SocketAddr<DEFAULT_PORT> {
     fn port(&self) -> u16 {
         self.port.unwrap_or(DEFAULT_PORT)
     }
+
+    fn to_socket_addr(&self) -> net::SocketAddr {
+        net::SocketAddr::new(self.ip, self.port())
+    }
 }
 
-impl<const DEFAULT_PORT: u16> From<SocketAddr<DEFAULT_PORT>> for std::net::SocketAddr {
+impl<const DEFAULT_PORT: u16> From<SocketAddr<DEFAULT_PORT>> for net::SocketAddr {
     fn from(addr: SocketAddr<DEFAULT_PORT>) -> Self {
-        std::net::SocketAddr::new(addr.ip, addr.port())
+        addr.to_socket_addr()
     }
 }
 
