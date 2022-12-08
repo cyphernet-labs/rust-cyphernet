@@ -1,3 +1,4 @@
+use crate::crypto::EcPk;
 use std::fmt::{self, Display, Formatter};
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
@@ -117,7 +118,7 @@ impl<const DEFAULT_PORT: u16> From<UniversalAddr<SocketAddr<DEFAULT_PORT>>>
     }
 }
 
-impl<Id, const DEFAULT_PORT: u16> From<UniversalAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
+impl<Id: EcPk, const DEFAULT_PORT: u16> From<UniversalAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
     for UniversalAddr<PeerAddr<Id, net::SocketAddr>>
 where
     Id: FromStr,

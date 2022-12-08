@@ -1,3 +1,4 @@
+use crate::crypto::EcPk;
 use std::fmt::{self, Display, Formatter};
 use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
@@ -46,7 +47,7 @@ impl<const DEFAULT_PORT: u16> From<ProxiedAddr<SocketAddr<DEFAULT_PORT>>>
     }
 }
 
-impl<Id, const DEFAULT_PORT: u16> From<ProxiedAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
+impl<Id: EcPk, const DEFAULT_PORT: u16> From<ProxiedAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
     for ProxiedAddr<PeerAddr<Id, net::SocketAddr>>
 {
     fn from(addr: ProxiedAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>) -> Self {

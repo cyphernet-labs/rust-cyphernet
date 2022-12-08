@@ -5,7 +5,7 @@
 //! encryption protocols like lightning wire protocol, NTLS etc).
 
 #[macro_use]
-extern crate amplify_derive;
+extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;

@@ -10,10 +10,6 @@ impl<const N: usize> ByteArray<N> {
     pub fn into_inner(self) -> [u8; N] {
         self.0
     }
-
-    pub fn as_slice(&self) -> &[u8] {
-        self.0.as_slice()
-    }
 }
 
 impl<const N: usize> Arbitrary for ByteArray<N> {

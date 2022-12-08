@@ -2,12 +2,11 @@ use std::borrow::Borrow;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io;
 use std::net::{self, ToSocketAddrs};
-use std::ops::Deref;
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
 use crate::addr::SocketAddr;
-use crate::crypto::{Ec, EcPrivKey, EcPubKey};
+use crate::crypto::{EcPk, EcSk, Ecdh};
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -29,84 +28,26 @@ where
     InvalidFormat,
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct NodeId<E: Ec + ?Sized>(E::PubKey);
-
-impl<E: Ec + ?Sized> Deref for NodeId<E> {
-    type Target = E::PubKey;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<E: Ec + ?Sized> AsRef<E::PubKey> for NodeId<E> {
-    fn as_ref(&self) -> &E::PubKey {
-        &self.0
-    }
-}
-
-impl<E: Ec + ?Sized> NodeId<E> {
-    pub fn from_public_key(pk: E::PubKey) -> Self {
-        Self(pk)
-    }
-
-    pub fn from_raw(raw: <E::PubKey as EcPubKey<E>>::Raw) -> Self {
-        Self(E::PubKey::from_raw(raw))
-    }
-
-    pub fn into_raw(self) -> <E::PubKey as EcPubKey<E>>::Raw {
-        self.0.into_raw()
-    }
-}
-
-impl<E: Ec + ?Sized> Display for NodeId<E>
-where
-    E::PubKey: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
-impl<E: Ec + ?Sized> FromStr for NodeId<E>
-where
-    E::PubKey: FromStr,
-{
-    type Err = <E::PubKey as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        E::PubKey::from_str(s).map(Self)
-    }
-}
-
 #[derive(Getters, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[getter(as_copy)]
-pub struct PeerAddr<Id, A: Addr = UniversalAddr> {
+pub struct PeerAddr<Id: EcPk, A: Addr = UniversalAddr> {
     id: Id,
     addr: A,
 }
 
-impl<Id, A: Addr> PeerAddr<Id, A> {
+impl<Id: EcPk, A: Addr> PeerAddr<Id, A> {
     pub fn new(id: Id, addr: A) -> Self {
         Self { id, addr }
     }
 }
 
-impl<Id, A: Addr> Borrow<Id> for PeerAddr<Id, A> {
+impl<Id: EcPk, A: Addr> Borrow<Id> for PeerAddr<Id, A> {
     fn borrow(&self) -> &Id {
         &self.id
     }
 }
 
-impl<E: Ec + ?Sized, A: Addr> AsRef<E::PubKey> for PeerAddr<NodeId<E>, A> {
-    fn as_ref(&self) -> &E::PubKey {
-        self.id.as_ref()
-    }
-}
-
-impl<Id, A: Addr> Addr for PeerAddr<Id, A> {
+impl<Id: EcPk, A: Addr> Addr for PeerAddr<Id, A> {
     fn port(&self) -> u16 {
         self.addr.port()
     }
@@ -116,7 +57,7 @@ impl<Id, A: Addr> Addr for PeerAddr<Id, A> {
     }
 }
 
-impl<Id, A: Addr> Display for PeerAddr<Id, A>
+impl<Id: EcPk, A: Addr> Display for PeerAddr<Id, A>
 where
     Id: Display,
     A: Display,
@@ -126,7 +67,7 @@ where
     }
 }
 
-impl<Id, A: Addr> FromStr for PeerAddr<Id, A>
+impl<Id: EcPk, A: Addr> FromStr for PeerAddr<Id, A>
 where
     Id: FromStr + Debug,
     <Id as FromStr>::Err: std::error::Error,
@@ -147,7 +88,7 @@ where
     }
 }
 
-impl<Id, const DEFAULT_PORT: u16> From<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>
+impl<Id: EcPk, const DEFAULT_PORT: u16> From<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>
     for PeerAddr<Id, net::SocketAddr>
 {
     fn from(peer: PeerAddr<Id, SocketAddr<DEFAULT_PORT>>) -> Self {
@@ -158,13 +99,13 @@ impl<Id, const DEFAULT_PORT: u16> From<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>
     }
 }
 
-impl<Id, A: Addr + Into<net::SocketAddr>> From<PeerAddr<Id, A>> for net::SocketAddr {
+impl<Id: EcPk, A: Addr + Into<net::SocketAddr>> From<PeerAddr<Id, A>> for net::SocketAddr {
     fn from(peer: PeerAddr<Id, A>) -> Self {
         peer.addr.into()
     }
 }
 
-impl<Id, A: Addr> PeerAddr<Id, A> {
+impl<Id: EcPk, A: Addr> PeerAddr<Id, A> {
     pub fn with(id: impl Into<Id>, addr: impl Into<A>) -> Self {
         PeerAddr {
             id: id.into(),
@@ -173,13 +114,7 @@ impl<Id, A: Addr> PeerAddr<Id, A> {
     }
 }
 
-impl<E: Ec + ?Sized, A: Addr> PeerAddr<NodeId<E>, A> {
-    pub fn to_pubkey(&self) -> E::PubKey {
-        self.id.0
-    }
-}
-
-impl<Id, A> ToSocketAddrs for PeerAddr<Id, A>
+impl<Id: EcPk, A> ToSocketAddrs for PeerAddr<Id, A>
 where
     A: Addr + ToSocketAddrs,
 {
@@ -190,26 +125,25 @@ where
     }
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct LocalNode<E: Ec + ?Sized> {
-    privkey: E::PrivKey,
-    pubkey: E::PubKey,
+pub struct NodeKeys<Sk: EcSk> {
+    sk: Sk,
+    pk: <Sk as EcSk>::Pk,
 }
 
-impl<E: Ec + ?Sized> LocalNode<E> {
-    pub fn from(sk: E::PrivKey) -> Self {
-        let pk = sk.to_public_key();
-        LocalNode {
-            privkey: sk,
-            pubkey: pk,
-        }
+impl<Sk: EcSk> NodeKeys<Sk> {
+    pub fn from(sk: Sk) -> Self {
+        let pk = sk.to_pk();
+        NodeKeys { sk, pk }
     }
 
-    pub fn id(&self) -> NodeId<E> {
-        NodeId::from_public_key(self.pubkey)
+    pub fn id(&self) -> &<Sk as EcSk>::Pk {
+        &self.pk
     }
 
-    pub fn private_key(&self) -> &E::PrivKey {
-        &self.privkey
+    pub fn ecdh<Dh: Ecdh<Sk = Sk>>(
+        &self,
+        remote_node_id: &<Sk as EcSk>::Pk,
+    ) -> Result<Dh, Dh::Err> {
+        Dh::ecdh(&self.sk, remote_node_id)
     }
 }

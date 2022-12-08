@@ -1,47 +1,27 @@
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-use std::fmt::{Debug, Display};
-use std::hash::Hash;
 use std::ops::{Add, AddAssign};
 
-pub trait Ec: Copy + Clone + Eq + Ord + Hash + Debug {
-    type PubKey: EcPubKey<Self>;
-    type PrivKey: EcPrivKey<Self>;
-    type EcdhSecret: Copy;
-    type EcdhErr;
+pub trait EcPk {}
+
+pub trait EcSk {
+    type Pk: EcPk;
+    fn to_pk(&self) -> Self::Pk;
 }
 
-pub trait EcPubKey<C: Ec + ?Sized>: Copy + Eq + Ord + Hash + Debug + Display {
-    type Raw: Copy;
+pub trait Ecdh: Sized {
+    type Sk: EcSk;
+    type Err;
 
-    fn from_raw(raw: Self::Raw) -> Self;
-    fn into_raw(self) -> Self::Raw;
-
-    fn ecdh(self, sk: &C::PrivKey) -> Result<C::EcdhSecret, C::EcdhErr>;
+    fn ecdh(sk: &Self::Sk, pk: &<Self::Sk as EcSk>::Pk) -> Result<Self, Self::Err>;
 }
 
-pub trait EcPrivKey<C: Ec + ?Sized>: Clone + Eq + Ord + Hash + Debug {
-    type Raw: Copy;
+pub trait EcSig {
+    type Sk: EcSk;
 
-    fn from_raw(raw: Self::Raw) -> Self;
-    fn into_raw(self) -> Self::Raw;
-    fn to_raw(&self) -> Self::Raw;
-    fn as_raw(&self) -> &Self::Raw;
-
-    fn to_public_key(&self) -> C::PubKey;
-
-    fn ecdh(&self, pk: C::PubKey) -> Result<C::EcdhSecret, C::EcdhErr>;
+    fn sign(self, sk: &Self::Sk, msg: impl AsRef<[u8]>) -> Self;
+    fn verify(self, pk: &<Self::Sk as EcSk>::Pk, msg: impl AsRef<[u8]>) -> bool;
 }
 
-pub trait EcSig<C: Ec + ?Sized>: Copy + Eq + Hash + Debug + Display {
-    type Raw: Copy;
-
-    fn from_raw(raw: Self::Raw) -> Self;
-    fn into_raw(self) -> Self::Raw;
-
-    fn sign(self, sk: C::PrivKey, msg: impl AsRef<[u8]>) -> Self;
-    fn verify(self, pk: C::PubKey, msg: impl AsRef<[u8]>) -> bool;
-}
-
-pub trait EcHomSig<C: Ec + ?Sized>: EcSig<C> + Add + AddAssign {}
+pub trait EcHmSig: EcSig + Add + AddAssign + Sized {}

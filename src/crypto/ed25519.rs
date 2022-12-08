@@ -6,17 +6,20 @@ use std::str::FromStr;
 
 use super::*;
 
-// Derivations required for automatic derivations of other types
-#[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
-pub struct Curve25519;
+#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[wrapper(Deref)]
+pub struct SharedSecret([u8; 32]);
 
-pub type SharedSecret = [u8; 32];
+impl Ecdh for SharedSecret {
+    type Sk = PrivateKey;
+    type Err = ::ed25519::Error;
 
-impl Ec for Curve25519 {
-    type PubKey = PublicKey;
-    type PrivKey = PrivateKey;
-    type EcdhSecret = SharedSecret;
-    type EcdhErr = ::ed25519::Error;
+    fn ecdh(sk: &PrivateKey, pk: &PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
+        let xpk = x25519::PublicKey::from_ed25519(&pk.0)?;
+        let xsk = x25519::SecretKey::from_ed25519(&sk.0)?;
+        let ss = xpk.dh(&xsk)?;
+        Ok(Self(*ss))
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -94,6 +97,8 @@ pub enum PublicKeyError {
     InvalidKey(::ed25519::Error),
 }
 
+impl EcPk for PublicKey {}
+
 impl Display for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_human())
@@ -130,25 +135,6 @@ impl TryFrom<String> for PublicKey {
     }
 }
 
-impl EcPubKey<Curve25519> for PublicKey {
-    type Raw = [u8; ::ed25519::PublicKey::BYTES];
-
-    fn from_raw(raw: Self::Raw) -> Self {
-        PublicKey::from(raw)
-    }
-
-    fn into_raw(self) -> Self::Raw {
-        *self.0.deref()
-    }
-
-    fn ecdh(self, sk: &PrivateKey) -> Result<SharedSecret, ::ed25519::Error> {
-        let xpk = x25519::PublicKey::from_ed25519(&self.0)?;
-        let xsk = x25519::SecretKey::from_ed25519(&sk.0)?;
-        let ss = xpk.dh(&xsk)?;
-        Ok(*ss)
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
@@ -164,34 +150,11 @@ impl Ord for PrivateKey {
     }
 }
 
-impl EcPrivKey<Curve25519> for PrivateKey {
-    type Raw = [u8; ::ed25519::SecretKey::BYTES];
+impl EcSk for PrivateKey {
+    type Pk = PublicKey;
 
-    fn from_raw(raw: Self::Raw) -> Self {
-        PrivateKey(::ed25519::SecretKey::new(raw))
-    }
-
-    fn into_raw(self) -> Self::Raw {
-        *self.0.deref()
-    }
-
-    fn to_raw(&self) -> Self::Raw {
-        *self.0.deref()
-    }
-
-    fn as_raw(&self) -> &Self::Raw {
-        self.0.deref()
-    }
-
-    fn to_public_key(&self) -> PublicKey {
+    fn to_pk(&self) -> PublicKey {
         self.0.public_key().into()
-    }
-
-    fn ecdh(&self, pk: PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
-        let xpk = x25519::PublicKey::from_ed25519(&pk.0)?;
-        let xsk = x25519::SecretKey::from_ed25519(&self.0)?;
-        let ss = xpk.dh(&xsk)?;
-        Ok(*ss)
     }
 }
 
@@ -229,22 +192,14 @@ impl TryFrom<&[u8]> for Signature {
     }
 }
 
-impl EcSig<Curve25519> for Signature {
-    type Raw = [u8; ::ed25519::Signature::BYTES];
+impl EcSig for Signature {
+    type Sk = PrivateKey;
 
-    fn from_raw(raw: Self::Raw) -> Self {
-        Signature::from(raw)
-    }
-
-    fn into_raw(self) -> Self::Raw {
-        *self.0
-    }
-
-    fn sign(self, sk: PrivateKey, msg: impl AsRef<[u8]>) -> Self {
+    fn sign(self, sk: &PrivateKey, msg: impl AsRef<[u8]>) -> Self {
         sk.0.sign(msg, None).into()
     }
 
-    fn verify(self, pk: PublicKey, msg: impl AsRef<[u8]>) -> bool {
+    fn verify(self, pk: &PublicKey, msg: impl AsRef<[u8]>) -> bool {
         pk.0.verify(msg, &self.0).is_ok()
     }
 }
