@@ -10,14 +10,15 @@ pub trait EcSk {
     fn to_pk(&self) -> Self::Pk;
 }
 
-pub trait Ecdh: Sized {
-    type Sk: EcSk<Pk = Self::Pk>;
+pub trait Ecdh {
     type Pk: EcPk;
+    type Secret: Sized;
     type Err;
 
-    fn ecdh(sk: &Self::Sk, pk: &Self::Pk) -> Result<Self, Self::Err>;
+    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err>;
 }
 
+/*
 pub trait EcSig {
     type Sk: EcSk<Pk = Self::Pk>;
     type Pk: EcPk;
@@ -27,3 +28,4 @@ pub trait EcSig {
 }
 
 pub trait EcHmSig: EcSig + Add + AddAssign + Sized {}
+*/

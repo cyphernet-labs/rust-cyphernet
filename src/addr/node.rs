@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
 use crate::addr::SocketAddr;
-use crate::crypto::{EcPk, EcSk, Ecdh};
+use crate::crypto::EcPk;
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -122,28 +122,5 @@ where
 
     fn to_socket_addrs(&self) -> io::Result<A::Iter> {
         self.addr.to_socket_addrs()
-    }
-}
-
-pub struct NodeKeys<Sk: EcSk> {
-    sk: Sk,
-    pk: <Sk as EcSk>::Pk,
-}
-
-impl<Sk: EcSk> NodeKeys<Sk> {
-    pub fn from(sk: Sk) -> Self {
-        let pk = sk.to_pk();
-        NodeKeys { sk, pk }
-    }
-
-    pub fn id(&self) -> &<Sk as EcSk>::Pk {
-        &self.pk
-    }
-
-    pub fn ecdh<Dh: Ecdh<Sk = Sk, Pk = Sk::Pk>>(
-        &self,
-        remote_node_id: &<Sk as EcSk>::Pk,
-    ) -> Result<Dh, Dh::Err> {
-        Dh::ecdh(&self.sk, remote_node_id)
     }
 }

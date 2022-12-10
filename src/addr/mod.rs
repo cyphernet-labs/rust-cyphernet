@@ -11,7 +11,7 @@ mod socket;
 mod universal;
 
 pub use net::{HostAddr, NetAddr};
-pub use node::{NodeKeys, PeerAddr, PeerAddrParseError};
+pub use node::{PeerAddr, PeerAddrParseError};
 pub use proxied::ProxiedAddr;
 pub use socket::SocketAddr;
 pub use universal::{ProxyError, UniversalAddr};

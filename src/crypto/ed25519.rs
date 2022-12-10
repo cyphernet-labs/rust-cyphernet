@@ -10,16 +10,16 @@ use super::*;
 #[wrapper(Deref)]
 pub struct SharedSecret([u8; 32]);
 
-impl Ecdh for SharedSecret {
-    type Sk = PrivateKey;
+impl Ecdh for PrivateKey {
     type Pk = PublicKey;
+    type Secret = SharedSecret;
     type Err = ::ed25519::Error;
 
-    fn ecdh(sk: &PrivateKey, pk: &PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
+    fn ecdh(&self, pk: &PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
         let xpk = x25519::PublicKey::from_ed25519(&pk.0)?;
-        let xsk = x25519::SecretKey::from_ed25519(&sk.0)?;
+        let xsk = x25519::SecretKey::from_ed25519(&self.0)?;
         let ss = xpk.dh(&xsk)?;
-        Ok(Self(*ss))
+        Ok(SharedSecret(*ss))
     }
 }
 
@@ -193,6 +193,7 @@ impl TryFrom<&[u8]> for Signature {
     }
 }
 
+/*
 impl EcSig for Signature {
     type Sk = PrivateKey;
     type Pk = PublicKey;
@@ -205,6 +206,7 @@ impl EcSig for Signature {
         pk.0.verify(msg, &self.0).is_ok()
     }
 }
+*/
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
