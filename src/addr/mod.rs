@@ -45,6 +45,24 @@ impl Addr for std::net::SocketAddrV6 {
     }
 }
 
+impl ToSocketAddr for std::net::SocketAddr {
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        *self
+    }
+}
+
+impl ToSocketAddr for std::net::SocketAddrV4 {
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        std::net::SocketAddr::V4(*self)
+    }
+}
+
+impl ToSocketAddr for std::net::SocketAddrV6 {
+    fn to_socket_addr(&self) -> std::net::SocketAddr {
+        std::net::SocketAddr::V6(*self)
+    }
+}
+
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum AddrParseError {
