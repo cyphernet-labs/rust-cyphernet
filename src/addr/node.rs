@@ -140,7 +140,7 @@ impl<Sk: EcSk> NodeKeys<Sk> {
         &self.pk
     }
 
-    pub fn ecdh<Dh: Ecdh<Sk = Sk>>(
+    pub fn ecdh<Dh: Ecdh<Sk = Sk, Pk = Sk::Pk>>(
         &self,
         remote_node_id: &<Sk as EcSk>::Pk,
     ) -> Result<Dh, Dh::Err> {

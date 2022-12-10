@@ -12,6 +12,7 @@ pub struct SharedSecret([u8; 32]);
 
 impl Ecdh for SharedSecret {
     type Sk = PrivateKey;
+    type Pk = PublicKey;
     type Err = ::ed25519::Error;
 
     fn ecdh(sk: &PrivateKey, pk: &PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
@@ -194,6 +195,7 @@ impl TryFrom<&[u8]> for Signature {
 
 impl EcSig for Signature {
     type Sk = PrivateKey;
+    type Pk = PublicKey;
 
     fn sign(self, sk: &PrivateKey, msg: impl AsRef<[u8]>) -> Self {
         sk.0.sign(msg, None).into()

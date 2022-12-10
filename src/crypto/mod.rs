@@ -11,17 +11,19 @@ pub trait EcSk {
 }
 
 pub trait Ecdh: Sized {
-    type Sk: EcSk;
+    type Sk: EcSk<Pk = Self::Pk>;
+    type Pk: EcPk;
     type Err;
 
-    fn ecdh(sk: &Self::Sk, pk: &<Self::Sk as EcSk>::Pk) -> Result<Self, Self::Err>;
+    fn ecdh(sk: &Self::Sk, pk: &Self::Pk) -> Result<Self, Self::Err>;
 }
 
 pub trait EcSig {
-    type Sk: EcSk;
+    type Sk: EcSk<Pk = Self::Pk>;
+    type Pk: EcPk;
 
     fn sign(self, sk: &Self::Sk, msg: impl AsRef<[u8]>) -> Self;
-    fn verify(self, pk: &<Self::Sk as EcSk>::Pk, msg: impl AsRef<[u8]>) -> bool;
+    fn verify(self, pk: &Self::Pk, msg: impl AsRef<[u8]>) -> bool;
 }
 
 pub trait EcHmSig: EcSig + Add + AddAssign + Sized {}
