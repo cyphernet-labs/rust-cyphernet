@@ -1,3 +1,4 @@
+use crate::addr::Addr;
 use std::fmt;
 use std::net::IpAddr;
 use std::str::FromStr;
@@ -60,8 +61,8 @@ pub struct NetAddr<const DEFAULT_PORT: u16> {
     pub port: Option<u16>,
 }
 
-impl<const DEFAULT_PORT: u16> NetAddr<DEFAULT_PORT> {
-    pub fn port(&self) -> u16 {
+impl<const DEFAULT_PORT: u16> Addr for NetAddr<DEFAULT_PORT> {
+    fn port(&self) -> u16 {
         self.port.unwrap_or(DEFAULT_PORT)
     }
 }

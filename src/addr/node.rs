@@ -5,7 +5,7 @@ use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
-use crate::addr::SocketAddr;
+use crate::addr::{SocketAddr, ToSocketAddr};
 use crate::crypto::EcPk;
 
 #[derive(Debug, Display, Error, From)]
@@ -51,7 +51,9 @@ impl<Id: EcPk, A: Addr> Addr for PeerAddr<Id, A> {
     fn port(&self) -> u16 {
         self.addr.port()
     }
+}
 
+impl<Id: EcPk, A: Addr + ToSocketAddr> ToSocketAddr for PeerAddr<Id, A> {
     fn to_socket_addr(&self) -> net::SocketAddr {
         self.addr.to_socket_addr()
     }

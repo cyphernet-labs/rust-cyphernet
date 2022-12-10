@@ -1,3 +1,4 @@
+use crate::addr::ToSocketAddr;
 use crate::crypto::EcPk;
 use std::fmt::{self, Display, Formatter};
 use std::net::ToSocketAddrs;
@@ -75,7 +76,9 @@ impl<A: Addr> Addr for UniversalAddr<A> {
             UniversalAddr::Direct(socket) => socket.port(),
         }
     }
+}
 
+impl<A: Addr + ToSocketAddr> ToSocketAddr for UniversalAddr<A> {
     fn to_socket_addr(&self) -> net::SocketAddr {
         match self {
             UniversalAddr::Proxied(proxied) => proxied.to_socket_addr(),
@@ -84,21 +87,9 @@ impl<A: Addr> Addr for UniversalAddr<A> {
     }
 }
 
-impl<A> UniversalAddr<A>
-where
-    A: Addr + Copy + Into<net::SocketAddr>,
-{
-    pub fn to_socket_addr(&self) -> net::SocketAddr {
-        match self {
-            UniversalAddr::Proxied(proxied) => proxied.to_socket_addr(),
-            UniversalAddr::Direct(socket_addr) => (*socket_addr).into(),
-        }
-    }
-}
-
 impl<A> ToSocketAddrs for UniversalAddr<A>
 where
-    A: Addr + Copy + Into<net::SocketAddr>,
+    A: Addr + ToSocketAddr,
 {
     type Iter = option::IntoIter<net::SocketAddr>;
 

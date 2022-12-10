@@ -1,3 +1,4 @@
+use crate::addr::ToSocketAddr;
 use crate::crypto::EcPk;
 use std::fmt::{self, Display, Formatter};
 use std::net::{self, ToSocketAddrs};
@@ -19,7 +20,9 @@ impl<A: Addr> Addr for ProxiedAddr<A> {
     fn port(&self) -> u16 {
         self.remote_addr.port()
     }
+}
 
+impl<A: Addr> ToSocketAddr for ProxiedAddr<A> {
     fn to_socket_addr(&self) -> net::SocketAddr {
         self.proxy_addr
     }

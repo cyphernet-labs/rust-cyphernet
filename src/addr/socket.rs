@@ -1,3 +1,4 @@
+use crate::addr::ToSocketAddr;
 use core::fmt;
 use std::net;
 use std::net::{IpAddr, Ipv4Addr};
@@ -32,7 +33,9 @@ impl<const DEFAULT_PORT: u16> Addr for SocketAddr<DEFAULT_PORT> {
     fn port(&self) -> u16 {
         self.port.unwrap_or(DEFAULT_PORT)
     }
+}
 
+impl<const DEFAULT_PORT: u16> ToSocketAddr for SocketAddr<DEFAULT_PORT> {
     fn to_socket_addr(&self) -> net::SocketAddr {
         net::SocketAddr::new(self.ip, self.port())
     }
