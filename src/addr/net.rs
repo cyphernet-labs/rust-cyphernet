@@ -71,7 +71,7 @@ impl<const DEFAULT_PORT: u16> fmt::Display for NetAddr<DEFAULT_PORT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.host, f)?;
         if let Some(port) = self.port {
-            write!(f, "{}", port)?;
+            write!(f, ":{}", port)?;
         }
         Ok(())
     }
