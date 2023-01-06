@@ -60,8 +60,19 @@ impl PublicKey {
         multibase::encode(multibase::Base::Base58Btc, &buf)
     }
 
+    #[cfg(feature = "pem")]
     pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
         ::ed25519::PublicKey::from_pem(pem).map(Self)
+    }
+
+    #[cfg(feature = "pem")]
+    pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
+        ::ed25519::PublicKey::from_der(der).map(Self::from)
+    }
+
+    #[cfg(feature = "pem")]
+    pub fn to_pem(&self) -> String {
+        self.0.to_pem()
     }
 }
 
@@ -159,6 +170,21 @@ impl EcSk for PrivateKey {
 }
 
 impl PrivateKey {
+    #[cfg(feature = "pem")]
+    pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
+        ::ed25519::SecretKey::from_pem(pem).map(Self::from)
+    }
+
+    #[cfg(feature = "pem")]
+    pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
+        ::ed25519::SecretKey::from_der(der).map(Self::from)
+    }
+
+    #[cfg(feature = "pem")]
+    pub fn to_pem(&self) -> String {
+        self.0.to_pem()
+    }
+
     #[cfg(feature = "rand")]
     pub fn test() -> Self {
         use rand::RngCore;
