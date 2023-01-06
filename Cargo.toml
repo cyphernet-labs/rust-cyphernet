@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "noise_xk"]
+
 [package]
 name = "cyphernet"
 version = "0.1.0"

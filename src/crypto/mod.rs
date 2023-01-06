@@ -1,8 +1,6 @@
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-use std::ops::{Add, AddAssign};
-
 pub trait EcPk {}
 
 pub trait EcSk {

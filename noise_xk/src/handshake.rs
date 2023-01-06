@@ -12,11 +12,11 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use ed25519_compact::x25519::{PublicKey, SecretKey};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 use super::ceremony::{
-    Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH,
-    EMPTY_ACT_ONE, EMPTY_ACT_THREE, EMPTY_ACT_TWO,
+    Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
+    EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
 use crate::{chacha, hkdf, EncryptionError, SymmetricKey};
 
@@ -35,9 +35,7 @@ macro_rules! concat_then_sha256 {
 	}}
 }
 
-#[derive(
-    Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Error, From
-)]
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Error, From)]
 #[display(inner)]
 pub enum HandshakeError {
     #[from]
@@ -73,39 +71,24 @@ impl HandshakeState {
     }
 
     pub fn new_responder(
-        responder_static_private_key: &SecretKey,
-        responder_ephemeral_private_key: &SecretKey,
+        responder_static_private_key: SecretKey,
+        responder_ephemeral_private_key: SecretKey,
     ) -> Self {
-        HandshakeState::ResponderAwaitingActOne(
-            ResponderAwaitingActOneState::new(
-                *responder_static_private_key,
-                *responder_ephemeral_private_key,
-            ),
-        )
+        HandshakeState::ResponderAwaitingActOne(ResponderAwaitingActOneState::new(
+            responder_static_private_key,
+            responder_ephemeral_private_key,
+        ))
     }
 
-    pub fn next(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         match self {
-            HandshakeState::InitiatorStarting(state) => {
-                state.next()
-            }
-            HandshakeState::ResponderAwaitingActOne(state) => {
-                state.next(input)
-            }
-            HandshakeState::InitiatorAwaitingActTwo(state) => {
-                state.next(input)
-            }
-            HandshakeState::ResponderAwaitingActThree(state) => {
-                state.next(input)
-            }
-            HandshakeState::Complete(_conduit) => {
-                Err(HandshakeError::Other(String::from(
-                    "Handshake State is Complete, nothing to process ",
-                )))
-            }
+            HandshakeState::InitiatorStarting(state) => state.next(),
+            HandshakeState::ResponderAwaitingActOne(state) => state.next(input),
+            HandshakeState::InitiatorAwaitingActTwo(state) => state.next(input),
+            HandshakeState::ResponderAwaitingActThree(state) => state.next(input),
+            HandshakeState::Complete(_conduit) => Err(HandshakeError::Other(String::from(
+                "Handshake State is Complete, nothing to process ",
+            ))),
         }
     }
 
@@ -171,7 +154,7 @@ pub struct Conduit {
     receiving_key: SymmetricKey,
     chaining_key: SymmetricKey,
     remote_pubkey: PublicKey,
-    buffer: Vec<u8>
+    buffer: Vec<u8>,
 }
 
 impl InitiatorStartingState {
@@ -180,14 +163,13 @@ impl InitiatorStartingState {
         initiator_ephemeral_private_key: SecretKey,
         responder_static_public_key: PublicKey,
     ) -> Self {
-        let initiator_static_public_key =
-            initiator_static_private_key.recover_public_key()
-                .expect("invalid initiator private key");
-        let (hash, chaining_key) =
-            initialize_handshake_state(&responder_static_public_key);
-        let initiator_ephemeral_public_key =
-            initiator_ephemeral_private_key.recover_public_key()
-                .expect("invalid initiator public key");
+        let initiator_static_public_key = initiator_static_private_key
+            .recover_public_key()
+            .expect("invalid initiator private key");
+        let (hash, chaining_key) = initialize_handshake_state(&responder_static_public_key);
+        let initiator_ephemeral_public_key = initiator_ephemeral_private_key
+            .recover_public_key()
+            .expect("invalid initiator public key");
         InitiatorStartingState {
             initiator_static_private_key,
             initiator_static_public_key,
@@ -207,15 +189,11 @@ impl InitiatorStartingState {
     // PR Comment: This function took an empty byte to be compatible with
     // IHandshake trait in mother implementation which we are not using
     // anymore. So we can get rid of the the length check.
-    pub fn next(
-        self,
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         let initiator_static_private_key = self.initiator_static_private_key;
         let initiator_static_public_key = self.initiator_static_public_key;
-        let initiator_ephemeral_private_key =
-            self.initiator_ephemeral_private_key;
-        let initiator_ephemeral_public_key =
-            self.initiator_ephemeral_public_key;
+        let initiator_ephemeral_private_key = self.initiator_ephemeral_private_key;
+        let initiator_ephemeral_public_key = self.initiator_ephemeral_public_key;
         let responder_static_public_key = self.responder_static_public_key;
         let chaining_key = self.chaining_key;
         let hash = self.hash;
@@ -223,7 +201,7 @@ impl InitiatorStartingState {
         // serialize act one
         let mut act_one = EMPTY_ACT_ONE;
         let (hash, chaining_key, _) = calculate_act_message(
-            initiator_ephemeral_private_key,
+            initiator_ephemeral_private_key.clone(),
             initiator_ephemeral_public_key,
             responder_static_public_key,
             chaining_key,
@@ -233,17 +211,15 @@ impl InitiatorStartingState {
 
         Ok((
             Some(Act::One(act_one)),
-            HandshakeState::InitiatorAwaitingActTwo(
-                InitiatorAwaitingActTwoState {
-                    initiator_static_private_key,
-                    initiator_static_public_key,
-                    initiator_ephemeral_private_key,
-                    responder_static_public_key,
-                    chaining_key,
-                    hash,
-                    act_two_builder: ActBuilder::new(Act::Two(EMPTY_ACT_TWO)),
-                },
-            ),
+            HandshakeState::InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState {
+                initiator_static_private_key,
+                initiator_static_public_key,
+                initiator_ephemeral_private_key,
+                responder_static_public_key,
+                chaining_key,
+                hash,
+                act_two_builder: ActBuilder::new(Act::Two(EMPTY_ACT_TWO)),
+            }),
         ))
     }
 }
@@ -253,14 +229,13 @@ impl ResponderAwaitingActOneState {
         responder_static_private_key: SecretKey,
         responder_ephemeral_private_key: SecretKey,
     ) -> Self {
-        let responder_static_public_key =
-            responder_static_private_key.recover_public_key()
-                .expect("invalid initiator public key");
-        let (hash, chaining_key) =
-            initialize_handshake_state(&responder_static_public_key);
-        let responder_ephemeral_public_key =
-            responder_ephemeral_private_key.recover_public_key()
-                .expect("invalid initiator public key");
+        let responder_static_public_key = responder_static_private_key
+            .recover_public_key()
+            .expect("invalid initiator public key");
+        let (hash, chaining_key) = initialize_handshake_state(&responder_static_public_key);
+        let responder_ephemeral_public_key = responder_ephemeral_private_key
+            .recover_public_key()
+            .expect("invalid initiator public key");
 
         ResponderAwaitingActOneState {
             responder_static_private_key,
@@ -274,10 +249,7 @@ impl ResponderAwaitingActOneState {
 
     // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (receiver)
     // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (sender)
-    pub fn next(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         let mut act_one_builder = self.act_one_builder;
         let bytes_read = act_one_builder.fill(input);
 
@@ -295,12 +267,9 @@ impl ResponderAwaitingActOneState {
             return Ok((
                 None,
                 HandshakeState::ResponderAwaitingActOne(Self {
-                    responder_static_private_key: self
-                        .responder_static_private_key,
-                    responder_ephemeral_private_key: self
-                        .responder_ephemeral_private_key,
-                    responder_ephemeral_public_key: self
-                        .responder_ephemeral_public_key,
+                    responder_static_private_key: self.responder_static_private_key,
+                    responder_ephemeral_private_key: self.responder_ephemeral_private_key,
+                    responder_ephemeral_public_key: self.responder_ephemeral_public_key,
                     chaining_key: self.chaining_key,
                     hash: self.hash,
                     act_one_builder,
@@ -311,23 +280,16 @@ impl ResponderAwaitingActOneState {
         let hash = self.hash;
         let responder_static_private_key = self.responder_static_private_key;
         let chaining_key = self.chaining_key;
-        let responder_ephemeral_private_key =
-            self.responder_ephemeral_private_key;
-        let responder_ephemeral_public_key =
-            self.responder_ephemeral_public_key;
+        let responder_ephemeral_private_key = self.responder_ephemeral_private_key;
+        let responder_ephemeral_public_key = self.responder_ephemeral_public_key;
         let act_one = Act::from(act_one_builder);
 
         let (initiator_ephemeral_public_key, hash, chaining_key, _) =
-            process_act_message(
-                &act_one,
-                responder_static_private_key,
-                chaining_key,
-                hash,
-            )?;
+            process_act_message(&act_one, responder_static_private_key, chaining_key, hash)?;
 
         let mut act_two = EMPTY_ACT_TWO;
         let (hash, chaining_key, temporary_key) = calculate_act_message(
-            responder_ephemeral_private_key,
+            responder_ephemeral_private_key.clone(),
             responder_ephemeral_public_key,
             initiator_ephemeral_public_key,
             chaining_key,
@@ -337,17 +299,13 @@ impl ResponderAwaitingActOneState {
 
         Ok((
             Some(Act::Two(act_two)),
-            HandshakeState::ResponderAwaitingActThree(
-                ResponderAwaitingActThreeState {
-                    hash,
-                    responder_ephemeral_private_key,
-                    chaining_key,
-                    temporary_key,
-                    act_three_builder: ActBuilder::new(Act::Three(
-                        EMPTY_ACT_THREE,
-                    )),
-                },
-            ),
+            HandshakeState::ResponderAwaitingActThree(ResponderAwaitingActThreeState {
+                hash,
+                responder_ephemeral_private_key,
+                chaining_key,
+                temporary_key,
+                act_three_builder: ActBuilder::new(Act::Three(EMPTY_ACT_THREE)),
+            }),
         ))
     }
 }
@@ -355,10 +313,7 @@ impl ResponderAwaitingActOneState {
 impl InitiatorAwaitingActTwoState {
     // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (receiver)
     // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-three (sender)
-    pub fn next(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         let mut act_two_builder = self.act_two_builder;
         let bytes_read = act_two_builder.fill(input);
 
@@ -376,14 +331,10 @@ impl InitiatorAwaitingActTwoState {
             return Ok((
                 None,
                 HandshakeState::InitiatorAwaitingActTwo(Self {
-                    initiator_static_private_key: self
-                        .initiator_static_private_key,
-                    initiator_static_public_key: self
-                        .initiator_static_public_key,
-                    initiator_ephemeral_private_key: self
-                        .initiator_ephemeral_private_key,
-                    responder_static_public_key: self
-                        .responder_static_public_key,
+                    initiator_static_private_key: self.initiator_static_private_key,
+                    initiator_static_public_key: self.initiator_static_public_key,
+                    initiator_ephemeral_private_key: self.initiator_ephemeral_private_key,
+                    responder_static_public_key: self.responder_static_public_key,
                     chaining_key: self.chaining_key,
                     hash: self.hash,
                     act_two_builder,
@@ -393,8 +344,7 @@ impl InitiatorAwaitingActTwoState {
 
         let initiator_static_private_key = self.initiator_static_private_key;
         let initiator_static_public_key = self.initiator_static_public_key;
-        let initiator_ephemeral_private_key =
-            self.initiator_ephemeral_private_key;
+        let initiator_ephemeral_private_key = self.initiator_ephemeral_private_key;
         let responder_static_public_key = self.responder_static_public_key;
         let hash = self.hash;
         let chaining_key = self.chaining_key;
@@ -424,22 +374,13 @@ impl InitiatorAwaitingActTwoState {
         let hash = concat_then_sha256!(hash, &act_three[1..50]);
 
         // 3. se = ECDH(s.priv, re)
-        let ecdh = ecdh(
-            initiator_static_private_key,
-            responder_ephemeral_public_key,
-        );
+        let ecdh = ecdh(initiator_static_private_key, responder_ephemeral_public_key);
 
         // 4. ck, temp_k3 = HKDF(ck, se)
         let (chaining_key, temporary_key) = hkdf::derive(&chaining_key, &ecdh);
 
         // 5. t = encryptWithAD(temp_k3, 0, h, zero)
-        chacha::encrypt(
-            &temporary_key,
-            0,
-            &hash,
-            &[0; 0],
-            &mut act_three[50..],
-        )?;
+        chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], &mut act_three[50..])?;
 
         // 6. sk, rk = HKDF(ck, zero)
         let (sending_key, receiving_key) = hkdf::derive(&chaining_key, &[0; 0]);
@@ -451,7 +392,7 @@ impl InitiatorAwaitingActTwoState {
             receiving_key,
             chaining_key,
             remote_pubkey: responder_static_public_key,
-            buffer: vec![]
+            buffer: vec![],
         };
 
         // 8. Send m = 0 || c || t
@@ -465,10 +406,7 @@ impl InitiatorAwaitingActTwoState {
 
 impl ResponderAwaitingActThreeState {
     // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-three (receiver)
-    fn next(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
         let mut act_three_builder = self.act_three_builder;
         let bytes_read = act_three_builder.fill(input);
 
@@ -480,8 +418,7 @@ impl ResponderAwaitingActThreeState {
                 None,
                 HandshakeState::ResponderAwaitingActThree(Self {
                     hash: self.hash,
-                    responder_ephemeral_private_key: self
-                        .responder_ephemeral_private_key,
+                    responder_ephemeral_private_key: self.responder_ephemeral_private_key,
                     chaining_key: self.chaining_key,
                     temporary_key: self.temporary_key,
                     act_three_builder,
@@ -491,8 +428,7 @@ impl ResponderAwaitingActThreeState {
 
         let hash = self.hash;
         let temporary_key = self.temporary_key;
-        let responder_ephemeral_private_key =
-            self.responder_ephemeral_private_key;
+        let responder_ephemeral_private_key = self.responder_ephemeral_private_key;
         let chaining_key = self.chaining_key;
 
         // 1. Read exactly 66 bytes from the network buffer
@@ -508,9 +444,7 @@ impl ResponderAwaitingActThreeState {
         // abort the connection attempt.
         if version != 0 {
             // this should not crash the process, hence no panic
-            return Err(HandshakeError::Other(
-                "unexpected version".to_string(),
-            ));
+            return Err(HandshakeError::Other("unexpected version".to_string()));
         }
 
         // 4. rs = decryptWithAD(temp_k2, 1, h, c)
@@ -541,14 +475,14 @@ impl ResponderAwaitingActThreeState {
 
         // 10. rn = 0, sn = 0
         // - done by Conduit
-        let mut conduit = Conduit {
+        let conduit = Conduit {
             sending_key,
             receiving_key,
             chaining_key,
             remote_pubkey: initiator_pubkey,
             // Any remaining data in the read buffer would be encrypted, so transfer
             // ownership to the Conduit for future use.
-            buffer: input[bytes_read..].to_vec()
+            buffer: input[bytes_read..].to_vec(),
         };
 
         Ok((None, HandshakeState::Complete(conduit)))
@@ -559,9 +493,7 @@ impl ResponderAwaitingActThreeState {
 // running on the initiator, the initiator provides the remote's static public
 // key and running on the responder they provide their own.
 // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#handshake-state-initialization
-fn initialize_handshake_state(
-    responder_static_public_key: &PublicKey,
-) -> ([u8; 32], [u8; 32]) {
+fn initialize_handshake_state(responder_static_public_key: &PublicKey) -> ([u8; 32], [u8; 32]) {
     let protocol_name = b"Noise_XK_secp256k1_ChaChaPoly_SHA256";
     let prologue = b"lightning";
 
@@ -573,8 +505,7 @@ fn initialize_handshake_state(
     let hash = concat_then_sha256!(chaining_key, prologue);
 
     // h = SHA-256(h || responderPublicKey)
-    let hash =
-        concat_then_sha256!(hash, responder_static_public_key.as_slice());
+    let hash = concat_then_sha256!(hash, responder_static_public_key.as_slice());
 
     (hash, chaining_key)
 }
@@ -637,15 +568,14 @@ fn process_act_message(
     let ephemeral_public_key_bytes = &act_bytes[1..34];
     let chacha_tag = &act_bytes[34..];
 
-    let ephemeral_public_key = if let Ok(public_key) =
-        PublicKey::from_slice(ephemeral_public_key_bytes)
-    {
-        public_key
-    } else {
-        return Err(HandshakeError::Other(
-            "invalid remote ephemeral public key".to_string(),
-        ));
-    };
+    let ephemeral_public_key =
+        if let Ok(public_key) = PublicKey::from_slice(ephemeral_public_key_bytes) {
+            public_key
+        } else {
+            return Err(HandshakeError::Other(
+                "invalid remote ephemeral public key".to_string(),
+            ));
+        };
 
     // 3. If v is an unrecognized handshake version, then the responder MUST
     // abort the connection attempt
@@ -676,9 +606,7 @@ fn process_act_message(
 }
 
 fn ecdh(private_key: SecretKey, public_key: PublicKey) -> SymmetricKey {
-    let pk_object = public_key
-        .dh(&private_key)
-        .expect("invalid multiplication");
+    let pk_object = public_key.dh(&private_key).expect("invalid multiplication");
 
     concat_then_sha256!(pk_object.as_slice())
 }
@@ -704,19 +632,17 @@ mod test {
 
     impl TestCtx {
         fn new() -> Self {
-            let initiator_static_private_key =
-                SecretKey::new([0x_11_u8; 32]);
-            let initiator_public_key = initiator_static_private_key.recover_public_key()
+            let initiator_static_private_key = SecretKey::new([0x_11_u8; 32]);
+            let initiator_public_key = initiator_static_private_key
+                .recover_public_key()
                 .expect("invalid initiator public key");
-            let initiator_ephemeral_private_key =
-                SecretKey::new([0x_12_u8; 32]);
+            let initiator_ephemeral_private_key = SecretKey::new([0x_12_u8; 32]);
 
-            let responder_static_private_key =
-                SecretKey::new([0x_21_u8; 32]);
-            let responder_static_public_key = responder_static_private_key.recover_public_key()
+            let responder_static_private_key = SecretKey::new([0x_21_u8; 32]);
+            let responder_static_public_key = responder_static_private_key
+                .recover_public_key()
                 .expect("invalid initiator public key");
-            let responder_ephemeral_private_key =
-                SecretKey::new([0x_22_u8; 32]);
+            let responder_ephemeral_private_key = SecretKey::new([0x_22_u8; 32]);
 
             let initiator = InitiatorStartingState::new(
                 initiator_static_private_key,
@@ -742,8 +668,7 @@ mod test {
 
     macro_rules! do_next_or_panic {
         ($state:expr, $input:expr) => {
-            if let (Some(output_act), next_state) = $state.next($input).unwrap()
-            {
+            if let (Some(output_act), next_state) = $state.next($input).unwrap() {
                 (output_act, next_state)
             } else {
                 panic!();
@@ -764,8 +689,7 @@ mod test {
     #[test]
     fn starting_to_awaiting_act_two() {
         let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
 
         assert_eq!(act1.as_ref(), test_ctx.valid_act1.as_slice());
         assert_matches!(awaiting_act_two_state, InitiatorAwaitingActTwo(_));
@@ -841,9 +765,7 @@ mod test {
 
         assert_eq!(
             test_ctx.responder.next(&act1).err().unwrap(),
-            HandshakeError::Other(String::from(
-                "invalid remote ephemeral public key"
-            ))
+            HandshakeError::Other(String::from("invalid remote ephemeral public key"))
         );
     }
 
@@ -866,8 +788,7 @@ mod test {
     #[test]
     fn awaiting_act_two_to_complete_extra_bytes() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
         let mut act2 = test_ctx.valid_act2;
         act2.extend_from_slice(&[1]);
 
@@ -882,8 +803,7 @@ mod test {
     #[test]
     fn awaiting_act_two_to_complete() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
         let (act3, complete_state) =
             do_next_or_panic!(awaiting_act_two_state, &test_ctx.valid_act2);
 
@@ -907,8 +827,7 @@ mod test {
     #[test]
     fn awaiting_act_two_to_complete_segmented() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
 
         let act2_partial1 = &test_ctx.valid_act2[..25];
         let act2_partial2 = &test_ctx.valid_act2[25..];
@@ -926,8 +845,7 @@ mod test {
     #[test]
     fn awaiting_act_two_bad_version_byte() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
         let act2 = Vec::<u8>::from_hex("0102466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae").unwrap();
 
         assert_eq!(
@@ -941,15 +859,12 @@ mod test {
     #[test]
     fn awaiting_act_two_invalid_ephemeral_public_key() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
         let act2 = Vec::<u8>::from_hex("0004466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730ae").unwrap();
 
         assert_eq!(
             awaiting_act_two_state.next(&act2).err().unwrap(),
-            HandshakeError::Other(String::from(
-                "invalid remote ephemeral public key"
-            ))
+            HandshakeError::Other(String::from("invalid remote ephemeral public key"))
         );
     }
 
@@ -958,8 +873,7 @@ mod test {
     #[test]
     fn awaiting_act_two_invalid_hmac() {
         let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
+        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
         let act2 = Vec::<u8>::from_hex("0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730af").unwrap();
 
         assert_eq!(
@@ -998,13 +912,12 @@ mod test {
         let mut act3 = test_ctx.valid_act3;
         act3.extend_from_slice(&[2; 100]);
 
-        let conduit = if let (None, Complete(conduit)) =
-            awaiting_act_three_state.next(&act3).unwrap()
-        {
-            conduit
-        } else {
-            panic!();
-        };
+        let conduit =
+            if let (None, Complete(conduit)) = awaiting_act_three_state.next(&act3).unwrap() {
+                conduit
+            } else {
+                panic!();
+            };
 
         assert_eq!(conduit.remote_pubkey, test_ctx.initiator_public_key);
     }
@@ -1039,10 +952,7 @@ mod test {
 
         let next_state = awaiting_act_three_state.next(act3_partial1).unwrap();
         assert_matches!(next_state, (None, ResponderAwaitingActThree(_)));
-        assert_matches!(
-            next_state.1.next(act3_partial2),
-            Ok((None, Complete(_)))
-        );
+        assert_matches!(next_state.1.next(act3_partial2), Ok((None, Complete(_))));
     }
 
     // Responder::AwaitingActThree -> Error (invalid hmac)
@@ -1095,12 +1005,9 @@ mod test {
     #[should_panic(expected = "nothing to process")]
     fn initiator_complete_next_fail() {
         let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, _awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &act1);
-        let (_act3, complete_state) =
-            do_next_or_panic!(awaiting_act_two_state, &act2);
+        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let (act2, _awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
+        let (_act3, complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
 
         complete_state.next(&[]).unwrap();
     }
@@ -1110,20 +1017,16 @@ mod test {
     #[should_panic(expected = "nothing to process")]
     fn responder_complete_next_fail() {
         let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &act1);
-        let (act3, _complete_state) =
-            do_next_or_panic!(awaiting_act_two_state, &act2);
+        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let (act2, awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
+        let (act3, _complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
 
-        let complete_state = if let (None, complete_state) =
-            awaiting_act_three_state.next(&act3).unwrap()
-        {
-            complete_state
-        } else {
-            panic!();
-        };
+        let complete_state =
+            if let (None, complete_state) = awaiting_act_three_state.next(&act3).unwrap() {
+                complete_state
+            } else {
+                panic!();
+            };
 
         complete_state.next(&[]).unwrap();
     }
@@ -1134,12 +1037,9 @@ mod test {
     #[test]
     fn test_acts_against_reference_bytes() {
         let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) =
-            do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, _awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &act1);
-        let (act3, _complete_state) =
-            do_next_or_panic!(awaiting_act_two_state, &act2);
+        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let (act2, _awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
+        let (act3, _complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
 
         assert_eq!(act1.as_ref().to_hex(),
 				   "00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c6a");

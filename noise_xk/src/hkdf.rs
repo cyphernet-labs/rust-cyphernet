@@ -13,17 +13,17 @@
 // You should have received a copy of the MIT License along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use sha2::{Sha256};
 use hmac::{Hmac, Mac};
-
-// Create alias for HMAC-SHA256
-type HmacSha256 = Hmac<Sha256>;
+use sha2::Sha256;
 
 // Allows 1 or more inputs and "concatenates" them together using the input()
 // function of HmacEngine::<Sha256>
-fn hmac_sha256(key: impl AsRef<[u8]>, inputs: impl IntoIterator<Item = impl AsRef<[u8]>>) -> [u8;32] {
-    let mut engine = HmacSha256::new_from_slice(key.as_ref())
-        .expect("HMAC must take key of any size");
+fn hmac_sha256(
+    key: impl AsRef<[u8]>,
+    inputs: impl IntoIterator<Item = impl AsRef<[u8]>>,
+) -> [u8; 32] {
+    let mut engine =
+        HmacSha256::new_from_slice(key.as_ref()).expect("HMAC must take key of any size");
     for input in inputs {
         engine.update(input.as_ref());
     }
@@ -78,9 +78,7 @@ mod test {
     // provided by the RFC which is 42 bytes.
     #[test]
     fn rfc_5869_test_vector_3() {
-        let ikm =
-            Vec::<u8>::from_hex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b")
-                .unwrap();
+        let ikm = Vec::<u8>::from_hex("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b").unwrap();
         let (t1, t2) = derive(&[], &ikm);
 
         let mut calculated_okm = t1.to_vec();
