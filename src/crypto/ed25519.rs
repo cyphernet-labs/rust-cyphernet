@@ -11,7 +11,6 @@ use super::*;
 pub struct SharedSecret([u8; 32]);
 
 impl Ecdh for PrivateKey {
-    type Pk = PublicKey;
     type Secret = SharedSecret;
     type Err = ::ed25519::Error;
 

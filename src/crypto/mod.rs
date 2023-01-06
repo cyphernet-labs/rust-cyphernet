@@ -8,8 +8,7 @@ pub trait EcSk {
     fn to_pk(&self) -> Self::Pk;
 }
 
-pub trait Ecdh {
-    type Pk: EcPk;
+pub trait Ecdh: EcSk {
     type Secret: Sized;
     type Err;
 
