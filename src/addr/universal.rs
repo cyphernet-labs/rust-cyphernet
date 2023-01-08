@@ -27,6 +27,19 @@ pub enum ProxyError {
 }
 
 impl<A: Addr> UniversalAddr<A> {
+    pub fn map<To: Addr>(self, map: impl FnOnce(A) -> To) -> UniversalAddr<To> {
+        match self {
+            UniversalAddr::Proxied(ProxiedAddr {
+                proxy_addr,
+                remote_addr,
+            }) => UniversalAddr::Proxied(ProxiedAddr {
+                proxy_addr,
+                remote_addr: map(remote_addr),
+            }),
+            UniversalAddr::Direct(direct) => UniversalAddr::Direct(map(direct)),
+        }
+    }
+
     pub fn has_proxy(&self) -> bool {
         matches!(self, UniversalAddr::Proxied(_))
     }
