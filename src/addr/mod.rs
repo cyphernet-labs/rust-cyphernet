@@ -8,6 +8,8 @@ mod node;
 pub mod nym;
 mod proxied;
 mod socket;
+#[cfg(feature = "tor")]
+pub mod tor;
 mod universal;
 
 pub use net::{HostAddr, NetAddr};
@@ -70,7 +72,7 @@ pub enum AddrParseError {
     #[cfg(feature = "tor")]
     #[display(inner)]
     /// invalid Tor ONION address
-    Tor(torut::onion::OnionAddressParseError),
+    Tor(tor::OnionAddrError),
 
     #[from]
     #[display(inner)]

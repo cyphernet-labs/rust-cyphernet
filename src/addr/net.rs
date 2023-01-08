@@ -15,7 +15,7 @@ pub enum HostAddr {
 
     #[cfg(feature = "tor")]
     #[from]
-    Tor(torut::onion::OnionAddressV3),
+    Tor(super::tor::OnionAddrV3),
 
     #[cfg(feature = "i2p")]
     #[from]
@@ -38,7 +38,7 @@ impl FromStr for HostAddr {
         }
         #[cfg(feature = "tor")]
         if s.ends_with(".onion") {
-            return torut::onion::OnionAddressV3::from_str(s)
+            return super::tor::OnionAddrV3::from_str(s)
                 .map(HostAddr::Tor)
                 .map_err(AddrParseError::from);
         }
