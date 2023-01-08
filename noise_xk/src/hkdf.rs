@@ -23,7 +23,7 @@ fn hmac_sha256(
     inputs: impl IntoIterator<Item = impl AsRef<[u8]>>,
 ) -> [u8; 32] {
     let mut engine =
-        HmacSha256::new_from_slice(key.as_ref()).expect("HMAC must take key of any size");
+        Hmac::<Sha256>::new_from_slice(key.as_ref()).expect("HMAC must take key of any size");
     for input in inputs {
         engine.update(input.as_ref());
     }

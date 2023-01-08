@@ -5,7 +5,7 @@ use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
-use crate::addr::{SocketAddr, ToSocketAddr};
+use crate::addr::{NetAddr, SocketAddr, ToSocketAddr};
 use crate::crypto::EcPk;
 
 #[derive(Debug, Display, Error, From)]
@@ -30,7 +30,7 @@ where
 
 #[derive(Getters, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[getter(as_copy)]
-pub struct PeerAddr<Id: EcPk, A: Addr = UniversalAddr> {
+pub struct PeerAddr<Id: EcPk, A: Addr> {
     id: Id,
     addr: A,
 }
