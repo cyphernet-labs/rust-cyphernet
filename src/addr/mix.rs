@@ -1,4 +1,4 @@
-use crate::addr::{Addr, Host, ToSocketAddr};
+use crate::addr::{Addr, Host, Localhost, ToSocketAddr};
 use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
@@ -266,6 +266,15 @@ pub type MixAddr = NetAddr<HostProxied>;
 pub struct PartialAddr<H: Host, const DEFAULT_PORT: u16> {
     pub host: H,
     pub port: Option<u16>,
+}
+
+impl<H: Localhost, const DEFAULT_PORT: u16> PartialAddr<H, DEFAULT_PORT> {
+    pub fn localhost(port: Option<u16>) -> Self {
+        Self {
+            host: H::localhost(),
+            port,
+        }
+    }
 }
 
 impl<H: Host, const DEFAULT_PORT: u16> Host for PartialAddr<H, DEFAULT_PORT> {}

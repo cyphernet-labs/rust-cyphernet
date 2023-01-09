@@ -30,6 +30,28 @@ impl Host for std::net::SocketAddrV4 {}
 
 impl Host for std::net::SocketAddrV6 {}
 
+pub trait Localhost: Host {
+    fn localhost() -> Self;
+}
+
+impl Localhost for std::net::IpAddr {
+    fn localhost() -> Self {
+        std::net::IpAddr::localhost()
+    }
+}
+
+impl Localhost for std::net::Ipv4Addr {
+    fn localhost() -> Self {
+        std::net::Ipv4Addr::localhost()
+    }
+}
+
+impl Localhost for std::net::Ipv6Addr {
+    fn localhost() -> Self {
+        std::net::Ipv6Addr::localhost()
+    }
+}
+
 pub trait Addr: Host {
     fn port(&self) -> u16;
 }
