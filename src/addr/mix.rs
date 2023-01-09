@@ -27,6 +27,13 @@ pub enum HostName {
 impl Host for HostName {}
 
 #[cfg(feature = "dns")]
+impl Localhost for HostName {
+    fn localhost() -> Self {
+        Self::Ip(Localhost::localhost())
+    }
+}
+
+#[cfg(feature = "dns")]
 impl FromStr for HostName {
     type Err = AddrParseError;
 
@@ -304,8 +311,6 @@ impl ToSocketAddrs for NetAddr<HostName> {
     }
 }
 
-pub type MixAddr = NetAddr<HostProxied>;
-
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PartialAddr<H: Host, const DEFAULT_PORT: u16> {
@@ -323,6 +328,18 @@ impl<H: Localhost, const DEFAULT_PORT: u16> PartialAddr<H, DEFAULT_PORT> {
 }
 
 impl<H: Host, const DEFAULT_PORT: u16> Host for PartialAddr<H, DEFAULT_PORT> {}
+
+impl<H: Host, const DEFAULT_PORT: u16> Localhost for PartialAddr<H, DEFAULT_PORT>
+where
+    H: Localhost,
+{
+    fn localhost() -> Self {
+        PartialAddr {
+            host: H::localhost(),
+            port: None,
+        }
+    }
+}
 
 impl<H: Host, const DEFAULT_PORT: u16> Addr for PartialAddr<H, DEFAULT_PORT> {
     fn port(&self) -> u16 {
