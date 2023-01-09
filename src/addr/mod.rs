@@ -2,20 +2,18 @@
 
 #[cfg(feature = "i2p")]
 pub mod i2p;
-mod net;
-// mod node;
+mod mix;
 #[cfg(feature = "nym")]
 pub mod nym;
+mod p2p;
 // mod proxied;
-// mod socket;
 #[cfg(feature = "tor")]
 pub mod tor;
 // mod universal;
 
-pub use net::{MixName, PartialAddr};
-// pub use node::{PeerAddr, PeerAddrParseError};
+pub use mix::{HostName, HostProxied, MixAddr, MixName, NetAddr, PartialAddr};
+pub use p2p::{PeerAddr, PeerAddrParseError};
 // pub use proxied::ProxiedAddr;
-// pub use socket::SocketAddr;
 // pub use universal::{ProxyError, UniversalAddr};
 
 pub trait Host {}

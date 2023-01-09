@@ -216,6 +216,15 @@ impl<H: Host, const DEFAULT_PORT: u16> Addr for PartialAddr<H, DEFAULT_PORT> {
     }
 }
 
+impl<H: Host, const DEFAULT_PORT: u16> From<PartialAddr<H, DEFAULT_PORT>> for NetAddr<H> {
+    fn from(addr: PartialAddr<H, DEFAULT_PORT>) -> Self {
+        NetAddr {
+            port: addr.port(),
+            host: addr.host,
+        }
+    }
+}
+
 impl<H: Host, const DEFAULT_PORT: u16> Display for PartialAddr<H, DEFAULT_PORT>
 where
     H: Display,

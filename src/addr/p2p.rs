@@ -4,8 +4,8 @@ use std::io;
 use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
 
-use super::{Addr, AddrParseError, UniversalAddr};
-use crate::addr::{PartialAddr, SocketAddr, ToSocketAddr};
+use super::{Addr, AddrParseError};
+use crate::addr::{Host, NetAddr, PartialAddr, ToSocketAddr};
 use crate::crypto::EcPk;
 
 #[derive(Debug, Display, Error, From)]
@@ -46,6 +46,8 @@ impl<Id: EcPk, A: Addr> Borrow<Id> for PeerAddr<Id, A> {
         &self.id
     }
 }
+
+impl<Id: EcPk, A: Addr> Host for PeerAddr<Id, A> {}
 
 impl<Id: EcPk, A: Addr> Addr for PeerAddr<Id, A> {
     fn port(&self) -> u16 {
@@ -90,10 +92,10 @@ where
     }
 }
 
-impl<Id: EcPk, const DEFAULT_PORT: u16> From<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>
-    for PeerAddr<Id, net::SocketAddr>
+impl<Id: EcPk, H: Host, const DEFAULT_PORT: u16> From<PeerAddr<Id, PartialAddr<H, DEFAULT_PORT>>>
+    for PeerAddr<Id, NetAddr<H>>
 {
-    fn from(peer: PeerAddr<Id, SocketAddr<DEFAULT_PORT>>) -> Self {
+    fn from(peer: PeerAddr<Id, PartialAddr<H, DEFAULT_PORT>>) -> Self {
         PeerAddr {
             addr: peer.addr.into(),
             id: peer.id,
