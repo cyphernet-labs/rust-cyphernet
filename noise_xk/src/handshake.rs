@@ -367,7 +367,7 @@ impl InitiatorAwaitingActTwoState {
             1,
             &hash,
             initiator_static_public_key.as_slice(),
-            &mut act_three[1..50],
+            Some(&mut act_three[1..50]),
         )?;
 
         // 2. h = SHA-256(h || c)
@@ -380,7 +380,13 @@ impl InitiatorAwaitingActTwoState {
         let (chaining_key, temporary_key) = hkdf::derive(&chaining_key, &ecdh);
 
         // 5. t = encryptWithAD(temp_k3, 0, h, zero)
-        chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], &mut act_three[50..])?;
+        chacha::encrypt(
+            &temporary_key,
+            0,
+            &hash,
+            &[0; 0],
+            Some(&mut act_three[50..]),
+        )?;
 
         // 6. sk, rk = HKDF(ck, zero)
         let (sending_key, receiving_key) = hkdf::derive(&chaining_key, &[0; 0]);
@@ -454,7 +460,7 @@ impl ResponderAwaitingActThreeState {
             1,
             &hash,
             tagged_encrypted_pubkey,
-            &mut remote_pubkey,
+            Some(&mut remote_pubkey),
         )?;
         let initiator_pubkey = PublicKey::new(remote_pubkey);
 
@@ -468,7 +474,7 @@ impl ResponderAwaitingActThreeState {
         let (chaining_key, temporary_key) = hkdf::derive(&chaining_key, &ecdh);
 
         // 8. p = decryptWithAD(temp_k3, 0, h, t)
-        chacha::decrypt(&temporary_key, 0, &hash, chacha_tag, &mut [0; 0])?;
+        chacha::decrypt(&temporary_key, 0, &hash, chacha_tag, Some(&mut [0; 0]))?;
 
         // 9. rk, sk = HKDF(ck, zero)
         let (receiving_key, sending_key) = hkdf::derive(&chaining_key, &[0; 0]);
@@ -536,7 +542,7 @@ fn calculate_act_message(
 
     // 5. ACT1: c = encryptWithAD(temp_k1, 0, h, zero)
     // 5. ACT2: c = encryptWithAD(temp_k2, 0, h, zero)
-    chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], &mut act_out[34..])?;
+    chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], Some(&mut act_out[34..]))?;
 
     // 6. h = SHA-256(h || c)
     let hash = concat_then_sha256!(hash, &act_out[34..]);
@@ -597,7 +603,7 @@ fn process_act_message(
 
     // 7. Act1: p = decryptWithAD(temp_k1, 0, h, c)
     // 7. Act2: p = decryptWithAD(temp_k2, 0, h, c)
-    chacha::decrypt(&temporary_key, 0, &hash, chacha_tag, &mut [0; 0])?;
+    chacha::decrypt(&temporary_key, 0, &hash, chacha_tag, Some(&mut [0; 0]))?;
 
     // 8. h = SHA-256(h || c)
     let hash = concat_then_sha256!(hash, chacha_tag);
