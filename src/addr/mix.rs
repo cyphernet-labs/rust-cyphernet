@@ -57,6 +57,8 @@ impl ToHostNames for HostName {
 #[non_exhaustive]
 pub enum MixName {
     #[from]
+    #[from(Ipv4Addr)]
+    #[from(Ipv6Addr)]
     Ip(IpAddr),
 
     #[cfg(feature = "dns")]
@@ -76,6 +78,15 @@ pub enum MixName {
 }
 
 impl Host for MixName {}
+
+impl From<HostName> for MixName {
+    fn from(host: HostName) -> Self {
+        match host {
+            HostName::Ip(ip) => MixName::Ip(ip),
+            HostName::Dns(dns) => MixName::Dns(dns),
+        }
+    }
+}
 
 impl FromStr for MixName {
     type Err = AddrParseError;
@@ -107,10 +118,15 @@ impl FromStr for MixName {
 #[non_exhaustive]
 pub enum HostProxied<P: ToSocketAddrs + Addr = NetAddr<HostName>> {
     #[from]
-    Ip(IpAddr),
+    #[from(IpAddr)]
+    #[from(Ipv4Addr)]
+    #[from(Ipv6Addr)]
+    Native(HostName),
+
+    Ip(IpAddr, P),
 
     #[cfg(feature = "dns")]
-    Dns(String),
+    Dns(String, P),
 
     #[cfg(feature = "tor")]
     Tor(super::tor::OnionAddrV3, P),
@@ -123,6 +139,29 @@ pub enum HostProxied<P: ToSocketAddrs + Addr = NetAddr<HostName>> {
 }
 
 impl<P: ToSocketAddrs + Addr> Host for HostProxied<P> {}
+
+impl<P: ToSocketAddrs + Addr> HostProxied<P> {
+    pub fn with_proxy(host: MixName, proxy: P) -> Self {
+        match host {
+            MixName::Ip(ip) => HostProxied::Ip(ip, proxy),
+            MixName::Dns(dns) => HostProxied::Dns(dns, proxy),
+            MixName::Tor(tor) => HostProxied::Tor(tor, proxy),
+            MixName::I2p(i2p) => HostProxied::I2p(i2p, proxy),
+            MixName::Nym(nym) => HostProxied::Nym(nym, proxy),
+        }
+    }
+
+    pub fn proxy(&self) -> Option<&P> {
+        match self {
+            HostProxied::Native(_) => None,
+            HostProxied::Ip(_, proxy)
+            | HostProxied::Dns(_, proxy)
+            | HostProxied::Tor(_, proxy)
+            | HostProxied::I2p(_, proxy)
+            | HostProxied::Nym(_, proxy) => Some(proxy),
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -139,7 +178,7 @@ impl<H: Host> Addr for NetAddr<H> {
     }
 }
 
-impl<H: Host> fmt::Display for NetAddr<H>
+impl<H: Host> Display for NetAddr<H>
 where
     H: Display,
 {

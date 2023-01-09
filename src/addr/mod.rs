@@ -9,12 +9,10 @@ mod p2p;
 // mod proxied;
 #[cfg(feature = "tor")]
 pub mod tor;
-// mod universal;
 
 pub use mix::{HostName, HostProxied, MixAddr, MixName, NetAddr, PartialAddr};
 pub use p2p::{PeerAddr, PeerAddrParseError};
 // pub use proxied::ProxiedAddr;
-// pub use universal::{ProxyError, UniversalAddr};
 
 pub trait Host {}
 
