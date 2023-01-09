@@ -1,7 +1,9 @@
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-pub trait EcPk {}
+pub trait EcPk {
+    fn generator() -> Self;
+}
 
 pub trait EcSk {
     type Pk: EcPk;

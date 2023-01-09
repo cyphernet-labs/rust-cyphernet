@@ -108,7 +108,12 @@ pub enum PublicKeyError {
     InvalidKey(::ed25519::Error),
 }
 
-impl EcPk for PublicKey {}
+impl EcPk for PublicKey {
+    fn generator() -> Self {
+        // TODO: Fixme
+        PublicKey(::ed25519::PublicKey::new([0u8; 32]))
+    }
+}
 
 impl Display for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
