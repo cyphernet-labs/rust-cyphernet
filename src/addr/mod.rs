@@ -3,27 +3,37 @@
 #[cfg(feature = "i2p")]
 pub mod i2p;
 mod net;
-mod node;
+// mod node;
 #[cfg(feature = "nym")]
 pub mod nym;
-mod proxied;
-mod socket;
+// mod proxied;
+// mod socket;
 #[cfg(feature = "tor")]
 pub mod tor;
-mod universal;
+// mod universal;
 
-pub use net::{HostAddr, NetAddr};
-pub use node::{PeerAddr, PeerAddrParseError};
-pub use proxied::ProxiedAddr;
-pub use socket::SocketAddr;
-pub use universal::{ProxyError, UniversalAddr};
+pub use net::{MixName, PartialAddr};
+// pub use node::{PeerAddr, PeerAddrParseError};
+// pub use proxied::ProxiedAddr;
+// pub use socket::SocketAddr;
+// pub use universal::{ProxyError, UniversalAddr};
 
-pub trait Addr {
+pub trait Host {}
+
+impl Host for std::net::IpAddr {}
+
+impl Host for std::net::Ipv4Addr {}
+
+impl Host for std::net::Ipv6Addr {}
+
+impl Host for std::net::SocketAddr {}
+
+impl Host for std::net::SocketAddrV4 {}
+
+impl Host for std::net::SocketAddrV6 {}
+
+pub trait Addr: Host {
     fn port(&self) -> u16;
-}
-
-pub trait ToSocketAddr {
-    fn to_socket_addr(&self) -> std::net::SocketAddr;
 }
 
 impl Addr for std::net::SocketAddr {
@@ -45,6 +55,43 @@ impl Addr for std::net::SocketAddrV6 {
     fn port(&self) -> u16 {
         std::net::SocketAddrV6::port(self)
     }
+}
+
+/*
+pub trait PortOr {
+    fn port_or(&self, default: u16) -> u16;
+}
+
+impl PortOr for std::net::IpAddr {
+    fn port_or(&self, default: u16) -> u16 {
+        match self {
+            std::net::SocketAddr::V4(v4) => v4.port(),
+            std::net::SocketAddr::V6(v6) => v6.port(),
+        }
+    }
+}
+
+impl PortOr for std::net::Ipv4Addr {
+    fn port_or(&self, default: u16) -> u16 {
+        std::net::SocketAddrV4::port(self)
+    }
+}
+
+impl PortOr for std::net::Ipv6Addr {
+    fn port_or(&self, default: u16) -> u16 {
+        std::net::SocketAddrV6::port(self)
+    }
+}
+ */
+
+/// Trait for the types which are able to return socket address to connect to.
+/// NBL In case of a proxied addresses this should be an address of the proxy,
+/// not the destination host.
+///
+/// The trait is required since the socket address has to be constructed from a
+/// type reference without cloning.
+pub trait ToSocketAddr {
+    fn to_socket_addr(&self) -> std::net::SocketAddr;
 }
 
 impl ToSocketAddr for std::net::SocketAddr {
@@ -84,6 +131,9 @@ pub enum AddrParseError {
 
     /// invalid port number
     InvalidPort,
+
+    /// absent port information
+    PortAbsent,
 
     /// unknown network address format
     UnknownAddressFormat,

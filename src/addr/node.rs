@@ -5,7 +5,7 @@ use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
 
 use super::{Addr, AddrParseError, UniversalAddr};
-use crate::addr::{NetAddr, SocketAddr, ToSocketAddr};
+use crate::addr::{PartialAddr, SocketAddr, ToSocketAddr};
 use crate::crypto::EcPk;
 
 #[derive(Debug, Display, Error, From)]
