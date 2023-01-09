@@ -1,6 +1,6 @@
 use crate::addr::{Addr, Host, Localhost, ToSocketAddr};
 use std::fmt::Display;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 use std::str::FromStr;
 use std::{fmt, io, vec};
 
@@ -220,6 +220,42 @@ where
                 host: H::from_str(host)?,
                 port: u16::from_str(port).map_err(|_| AddrParseError::InvalidPort)?,
             }),
+        }
+    }
+}
+
+impl<H: Host> From<SocketAddr> for NetAddr<H>
+where
+    H: From<IpAddr>,
+{
+    fn from(socket_addr: SocketAddr) -> Self {
+        NetAddr {
+            host: H::from(socket_addr.ip()),
+            port: socket_addr.port(),
+        }
+    }
+}
+
+impl<H: Host> From<SocketAddrV4> for NetAddr<H>
+where
+    H: From<Ipv4Addr>,
+{
+    fn from(socket_addr: SocketAddrV4) -> Self {
+        NetAddr {
+            host: H::from(*socket_addr.ip()),
+            port: socket_addr.port(),
+        }
+    }
+}
+
+impl<H: Host> From<SocketAddrV6> for NetAddr<H>
+where
+    H: From<Ipv6Addr>,
+{
+    fn from(socket_addr: SocketAddrV6) -> Self {
+        NetAddr {
+            host: H::from(*socket_addr.ip()),
+            port: socket_addr.port(),
         }
     }
 }
