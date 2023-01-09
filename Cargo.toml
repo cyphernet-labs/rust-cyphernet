@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "noise_xk"]
+members = [".", "noise_xk", "socks5h"]
 
 [package]
 name = "cyphernet"
