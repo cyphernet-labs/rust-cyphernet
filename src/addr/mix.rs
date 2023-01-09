@@ -8,7 +8,7 @@ use super::AddrParseError;
 
 /// A host name which can be consumed by `std::net` methods via use of
 /// [`ToSocketAddrs`] trait (when combined with port address).
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]
 #[cfg(feature = "dns")]
@@ -39,7 +39,7 @@ impl FromStr for HostName {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, From)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]
 #[non_exhaustive]
@@ -107,7 +107,7 @@ type DefaultAddr = NetAddr<HostName>;
 #[cfg(not(feature = "dns"))]
 type DefaultAddr = NetAddr<IpAddr>;
 
-#[derive(Clone, PartialEq, Eq, Debug, From)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[non_exhaustive]
 pub enum HostProxied<P: ToSocketAddrs + Addr = DefaultAddr> {
@@ -172,11 +172,20 @@ impl<P: ToSocketAddrs + Addr> HostProxied<P> {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct NetAddr<H: Host> {
     pub host: H,
     pub port: u16,
+}
+
+impl<H: Localhost> NetAddr<H> {
+    pub fn localhost(port: u16) -> Self {
+        Self {
+            host: H::localhost(),
+            port,
+        }
+    }
 }
 
 impl<H: Host> Host for NetAddr<H> {}
