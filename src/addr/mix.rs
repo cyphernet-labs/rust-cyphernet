@@ -11,6 +11,7 @@ use super::AddrParseError;
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]
+#[cfg(feature = "dns")]
 pub enum HostName {
     /// IP name, including both IPv4 and IPv6 variants
     #[from]
@@ -22,8 +23,10 @@ pub enum HostName {
     Dns(String),
 }
 
+#[cfg(feature = "dns")]
 impl Host for HostName {}
 
+#[cfg(feature = "dns")]
 impl FromStr for HostName {
     type Err = AddrParseError;
 
@@ -35,21 +38,6 @@ impl FromStr for HostName {
         }
     }
 }
-
-/*
-pub trait ToHostNames {
-    type Iter<'a>: Iterator<Item = &'a HostName>;
-    fn to_host_names(&self) -> Self::Iter;
-}
-
-impl ToHostNames for HostName {
-    type Iter<'a> = option::IntoIter<&'a HostName>;
-
-    fn to_host_names(&self) -> Self::Iter {
-        Some(self).into_iter()
-    }
-}
- */
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -79,6 +67,7 @@ pub enum MixName {
 
 impl Host for MixName {}
 
+#[cfg(feature = "dns")]
 impl From<HostName> for MixName {
     fn from(host: HostName) -> Self {
         match host {
@@ -113,15 +102,27 @@ impl FromStr for MixName {
     }
 }
 
+#[cfg(feature = "dns")]
+type DefaultAddr = NetAddr<HostName>;
+#[cfg(not(feature = "dns"))]
+type DefaultAddr = NetAddr<IpAddr>;
+
 #[derive(Clone, PartialEq, Eq, Debug, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[non_exhaustive]
-pub enum HostProxied<P: ToSocketAddrs + Addr = NetAddr<HostName>> {
+pub enum HostProxied<P: ToSocketAddrs + Addr = DefaultAddr> {
+    #[cfg(feature = "dns")]
     #[from]
     #[from(IpAddr)]
     #[from(Ipv4Addr)]
     #[from(Ipv6Addr)]
     Native(HostName),
+
+    #[cfg(not(feature = "dns"))]
+    #[from(IpAddr)]
+    #[from(Ipv4Addr)]
+    #[from(Ipv6Addr)]
+    Native(IpAddr),
 
     Ip(IpAddr, P),
 
@@ -144,9 +145,13 @@ impl<P: ToSocketAddrs + Addr> HostProxied<P> {
     pub fn with_proxy(host: MixName, proxy: P) -> Self {
         match host {
             MixName::Ip(ip) => HostProxied::Ip(ip, proxy),
+            #[cfg(feature = "dns")]
             MixName::Dns(dns) => HostProxied::Dns(dns, proxy),
+            #[cfg(feature = "tor")]
             MixName::Tor(tor) => HostProxied::Tor(tor, proxy),
+            #[cfg(feature = "i2p")]
             MixName::I2p(i2p) => HostProxied::I2p(i2p, proxy),
+            #[cfg(feature = "nym")]
             MixName::Nym(nym) => HostProxied::Nym(nym, proxy),
         }
     }
@@ -154,11 +159,15 @@ impl<P: ToSocketAddrs + Addr> HostProxied<P> {
     pub fn proxy(&self) -> Option<&P> {
         match self {
             HostProxied::Native(_) => None,
-            HostProxied::Ip(_, proxy)
-            | HostProxied::Dns(_, proxy)
-            | HostProxied::Tor(_, proxy)
-            | HostProxied::I2p(_, proxy)
-            | HostProxied::Nym(_, proxy) => Some(proxy),
+            HostProxied::Ip(_, proxy) => Some(proxy),
+            #[cfg(feature = "dns")]
+            HostProxied::Dns(_, proxy) => Some(proxy),
+            #[cfg(feature = "tor")]
+            HostProxied::Tor(_, proxy) => Some(proxy),
+            #[cfg(feature = "i2p")]
+            HostProxied::I2p(_, proxy) => Some(proxy),
+            #[cfg(feature = "nym")]
+            HostProxied::Nym(_, proxy) => Some(proxy),
         }
     }
 }
@@ -224,6 +233,18 @@ impl ToSocketAddr for NetAddr<Ipv6Addr> {
     }
 }
 
+impl ToSocketAddrs for NetAddr<IpAddr> {
+    type Iter = vec::IntoIter<SocketAddr>;
+
+    fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
+        Ok(SocketAddr::new(self.host, self.port)
+            .to_socket_addrs()?
+            .collect::<Vec<_>>()
+            .into_iter())
+    }
+}
+
+#[cfg(feature = "dns")]
 impl ToSocketAddrs for NetAddr<HostName> {
     type Iter = vec::IntoIter<SocketAddr>;
 

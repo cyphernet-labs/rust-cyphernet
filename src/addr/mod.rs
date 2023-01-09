@@ -10,7 +10,9 @@ mod p2p;
 #[cfg(feature = "tor")]
 pub mod tor;
 
-pub use mix::{HostName, HostProxied, MixAddr, MixName, NetAddr, PartialAddr};
+#[cfg(feature = "dns")]
+pub use mix::HostName;
+pub use mix::{HostProxied, MixAddr, MixName, NetAddr, PartialAddr};
 pub use p2p::{PeerAddr, PeerAddrParseError};
 // pub use proxied::ProxiedAddr;
 
