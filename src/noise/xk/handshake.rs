@@ -130,11 +130,11 @@ impl NoiseState for NoiseXkState {
 
     fn next_handshake_len(&self) -> usize {
         match self {
-            NoiseXkState::InitiatorStarting(_) => 50,
-            NoiseXkState::ResponderAwaitingActOne(_) => 50,
-            NoiseXkState::InitiatorAwaitingActTwo(_) => 50,
-            NoiseXkState::ResponderAwaitingActThree(_) => 66,
-            NoiseXkState::Complete { .. } => 66,
+            NoiseXkState::InitiatorStarting(_) => ACT_ONE_LENGTH,
+            NoiseXkState::ResponderAwaitingActOne(_) => ACT_ONE_LENGTH,
+            NoiseXkState::InitiatorAwaitingActTwo(_) => ACT_TWO_LENGTH,
+            NoiseXkState::ResponderAwaitingActThree(_) => ACT_THREE_LENGTH,
+            NoiseXkState::Complete { .. } => ACT_THREE_LENGTH,
         }
     }
 
