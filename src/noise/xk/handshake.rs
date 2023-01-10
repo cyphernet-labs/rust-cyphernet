@@ -344,7 +344,7 @@ impl ResponderAwaitingActOneState {
         let act_one = Act::from(act_one_builder);
 
         let (initiator_ephemeral_public_key, hash, chaining_key, _) =
-            process_act_message(&act_one, &responder_static_private_key, chaining_key, hash)?;
+            process_act_message::<1>(&act_one, &responder_static_private_key, chaining_key, hash)?;
 
         let mut act_two = EMPTY_ACT_TWO;
         let (hash, chaining_key, temporary_key) = calculate_act_message(
@@ -412,7 +412,7 @@ impl InitiatorAwaitingActTwoState {
         let act_two = Act::from(act_two_builder);
 
         let (responder_ephemeral_public_key, hash, chaining_key, temporary_key) =
-            process_act_message(
+            process_act_message::<2>(
                 &act_two,
                 initiator_ephemeral_private_key,
                 chaining_key,
@@ -517,14 +517,14 @@ impl ResponderAwaitingActThreeState {
 
         // 2. Parse the read message (m) into v, c, and t
         let version = act_three_bytes[0];
-        let tagged_encrypted_pubkey = &act_three_bytes[1..50];
-        let chacha_tag = &act_three_bytes[50..];
+        let tagged_encrypted_pubkey = &act_three_bytes[1..(17 + PUBKEY_LEN)];
+        let chacha_tag = &act_three_bytes[(17 + PUBKEY_LEN)..];
 
         // 3. If v is an unrecognized handshake version, then the responder MUST
         // abort the connection attempt.
         if version != 0 {
             // this should not crash the process, hence no panic
-            return Err(HandshakeError::UnexpectedVersion(version));
+            return Err(HandshakeError::UnexpectedVersion { version, act: 3 });
         }
 
         // 4. rs = decryptWithAD(temp_k2, 1, h, c)
@@ -647,7 +647,7 @@ fn calculate_act_message(
 
 // Due to the very high similarity of acts 1 and 2, this method is used to
 // process both
-fn process_act_message(
+fn process_act_message<const ACT: u8>(
     act_bytes: &[u8],
     local_private_key: &SecretKey,
     chaining_key: ChainingKey,
@@ -675,7 +675,7 @@ fn process_act_message(
     // abort the connection attempt
     if version != 0 {
         // this should not crash the process, hence no panic
-        return Err(HandshakeError::UnexpectedVersion(version));
+        return Err(HandshakeError::UnexpectedVersion { version, act: ACT });
     }
 
     // 4. h = SHA-256(h || re.serializeCompressed())
@@ -860,9 +860,9 @@ mod test {
         let mut test_ctx = TestCtx::new();
         let act1 = Vec::<u8>::from_hex("01036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
-        assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
-            HandshakeError::UnexpectedVersion(1)
+        assert_matches!(
+            test_ctx.responder.advance_handshake(&act1),
+            Err(HandshakeError::UnexpectedVersion { version: 1, act: 1 })
         );
     }
 
@@ -874,9 +874,9 @@ mod test {
         let mut test_ctx = TestCtx::new();
         let act1 = Vec::<u8>::from_hex("00046360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
-        assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
-            HandshakeError::InvalidEphemeralPubkey
+        assert_matches!(
+            test_ctx.responder.advance_handshake(&act1),
+            Err(HandshakeError::InvalidEphemeralPubkey)
         );
     }
 
@@ -973,7 +973,7 @@ mod test {
 
         assert_matches!(
             test_ctx.initiator.advance_handshake(&act2),
-            Err(HandshakeError::UnexpectedVersion(1))
+            Err(HandshakeError::UnexpectedVersion { version: 1, act: 2 })
         );
     }
 
@@ -1057,7 +1057,7 @@ mod test {
 
         assert_matches!(
             test_ctx.responder.advance_handshake(&act3),
-            Err(HandshakeError::UnexpectedVersion(1))
+            Err(HandshakeError::UnexpectedVersion { version: 1, act: 3 })
         );
     }
 

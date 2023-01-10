@@ -20,8 +20,8 @@ pub enum EncryptionError {
 #[derive(Debug, Clone, PartialEq, Eq, Display, Error, From)]
 #[display(doc_comments)]
 pub enum HandshakeError {
-    /// unexpected version of noise protocol: {0}.
-    UnexpectedVersion(u8),
+    /// unexpected version of noise protocol {version} in act {act} of handshake.
+    UnexpectedVersion { version: u8, act: u8 },
 
     /// invalid remote ephemeral pubkey provided during noise handshake.
     InvalidEphemeralPubkey,
