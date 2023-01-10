@@ -39,7 +39,9 @@ pub enum Act {
 
 impl Act {
     /// Returns the size of the underlying array
-    fn len(&self) -> usize { self.as_ref().len() }
+    fn len(&self) -> usize {
+        self.as_ref().len()
+    }
 }
 
 impl From<ActBuilder> for Act {
@@ -67,7 +69,9 @@ impl ops::Deref for Act {
 impl AsRef<[u8]> for Act {
     /// Allow convenient exposure of the underlying array through as_ref()
     /// Act.as_ref() -> &[u8]
-    fn as_ref(&self) -> &[u8] { self }
+    fn as_ref(&self) -> &[u8] {
+        self
+    }
 }
 
 /// Light wrapper around an Act that allows multiple fill() calls before finally
@@ -96,11 +100,9 @@ impl ActBuilder {
         // returns &[u8] of remaining input that was not processed
         macro_rules! fill_act_content {
             ($act:expr, $write_pos:expr, $input:expr) => {{
-                let fill_amount =
-                    cmp::min($act.len() - $write_pos, $input.len());
+                let fill_amount = cmp::min($act.len() - $write_pos, $input.len());
 
-                $act[$write_pos..$write_pos + fill_amount]
-                    .copy_from_slice(&$input[..fill_amount]);
+                $act[$write_pos..$write_pos + fill_amount].copy_from_slice(&$input[..fill_amount]);
 
                 $write_pos += fill_amount;
                 fill_amount

@@ -38,7 +38,6 @@ pub fn encrypt(
         aad: associated_data,
     };
     let encrypted = _cypher(key).encrypt(&_nonce(nonce), payload)?;
-    debug_assert_eq!(plaintext.len(), encrypted.len());
     ciphertext.map(|e| e.copy_from_slice(&encrypted));
     Ok(encrypted)
 }
@@ -65,7 +64,6 @@ pub fn decrypt(
         aad: associated_data,
     };
     let decrypted = _cypher(key).decrypt(&_nonce(nonce), payload)?;
-    debug_assert_eq!(ciphertext.len(), decrypted.len());
     plaintext.map(|d| d.copy_from_slice(&decrypted));
     Ok(decrypted)
 }

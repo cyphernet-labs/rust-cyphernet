@@ -18,7 +18,7 @@ use super::ceremony::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
-use crate::noise::framing::NoiseTranscoder;
+use crate::noise::framing::{NoiseDecryptor, NoiseEncryptor};
 use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
@@ -26,7 +26,7 @@ use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey
 type ChainingKey = [u8; 32];
 
 // Generate a SHA-256 hash from one or more elements concatenated together
-macro_rules! concat_then_sha256 {
+macro_rules! sha256 {
 	( $( $x:expr ),+ ) => {{
         let mut sha = Sha256::new();
 		$(
@@ -45,26 +45,32 @@ pub enum HandshakeError {
     #[from]
     #[from(chacha20poly1305::aead::Error)]
     Encryption(EncryptionError),
+
+    /// Noise_XK handshake is Complete, nothing to process
+    Complete,
 }
 
 #[derive(Debug)]
-pub enum HandshakeState {
+pub enum NoiseXkState {
     InitiatorStarting(InitiatorStartingState),
     ResponderAwaitingActOne(ResponderAwaitingActOneState),
     InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState),
     ResponderAwaitingActThree(ResponderAwaitingActThreeState),
-    Complete(NoiseTranscoder),
+    Complete {
+        encryptor: NoiseEncryptor,
+        decryptor: NoiseDecryptor,
+    },
 }
 
 // Enum dispatch for state machine. Single public interface can statically
 // dispatch to all states
-impl HandshakeState {
+impl NoiseXkState {
     pub fn new_initiator(
         initiator_static_private_key: SecretKey,
         responder_static_public_key: PublicKey,
         initiator_ephemeral_private_key: SecretKey,
     ) -> Self {
-        HandshakeState::InitiatorStarting(InitiatorStartingState::new(
+        NoiseXkState::InitiatorStarting(InitiatorStartingState::new(
             initiator_static_private_key,
             initiator_ephemeral_private_key,
             responder_static_public_key,
@@ -75,31 +81,29 @@ impl HandshakeState {
         responder_static_private_key: SecretKey,
         responder_ephemeral_private_key: SecretKey,
     ) -> Self {
-        HandshakeState::ResponderAwaitingActOne(ResponderAwaitingActOneState::new(
+        NoiseXkState::ResponderAwaitingActOne(ResponderAwaitingActOneState::new(
             responder_static_private_key,
             responder_ephemeral_private_key,
         ))
     }
 
-    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
         match self {
-            HandshakeState::InitiatorStarting(state) => state.next(),
-            HandshakeState::ResponderAwaitingActOne(state) => state.next(input),
-            HandshakeState::InitiatorAwaitingActTwo(state) => state.next(input),
-            HandshakeState::ResponderAwaitingActThree(state) => state.next(input),
-            HandshakeState::Complete(_conduit) => Err(HandshakeError::Other(String::from(
-                "Handshake State is Complete, nothing to process ",
-            ))),
+            NoiseXkState::InitiatorStarting(state) => state.next(),
+            NoiseXkState::ResponderAwaitingActOne(state) => state.next(input),
+            NoiseXkState::InitiatorAwaitingActTwo(state) => state.next(input),
+            NoiseXkState::ResponderAwaitingActThree(state) => state.next(input),
+            NoiseXkState::Complete { .. } => Err(HandshakeError::Complete),
         }
     }
 
     pub fn data_len(&self) -> usize {
         match self {
-            HandshakeState::InitiatorStarting(_) => 50,
-            HandshakeState::ResponderAwaitingActOne(_) => 50,
-            HandshakeState::InitiatorAwaitingActTwo(_) => 50,
-            HandshakeState::ResponderAwaitingActThree(_) => 66,
-            HandshakeState::Complete(_) => 66,
+            NoiseXkState::InitiatorStarting(_) => 50,
+            NoiseXkState::ResponderAwaitingActOne(_) => 50,
+            NoiseXkState::InitiatorAwaitingActTwo(_) => 50,
+            NoiseXkState::ResponderAwaitingActThree(_) => 66,
+            NoiseXkState::Complete { .. } => 66,
         }
     }
 }
@@ -181,7 +185,7 @@ impl InitiatorStartingState {
     // PR Comment: This function took an empty byte to be compatible with
     // IHandshake trait in mother implementation which we are not using
     // anymore. So we can get rid of the the length check.
-    pub fn next(self) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
         let initiator_static_private_key = self.initiator_static_private_key;
         let initiator_static_public_key = self.initiator_static_public_key;
         let initiator_ephemeral_private_key = self.initiator_ephemeral_private_key;
@@ -203,7 +207,7 @@ impl InitiatorStartingState {
 
         Ok((
             Some(Act::One(act_one)),
-            HandshakeState::InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState {
+            NoiseXkState::InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState {
                 initiator_static_private_key,
                 initiator_static_public_key,
                 initiator_ephemeral_private_key,
@@ -239,9 +243,7 @@ impl ResponderAwaitingActOneState {
         }
     }
 
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (receiver)
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (sender)
-    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
         let mut act_one_builder = self.act_one_builder;
         let bytes_read = act_one_builder.fill(input);
 
@@ -258,7 +260,7 @@ impl ResponderAwaitingActOneState {
             assert_eq!(bytes_read, input.len());
             return Ok((
                 None,
-                HandshakeState::ResponderAwaitingActOne(Self {
+                NoiseXkState::ResponderAwaitingActOne(Self {
                     responder_static_private_key: self.responder_static_private_key,
                     responder_ephemeral_private_key: self.responder_ephemeral_private_key,
                     responder_ephemeral_public_key: self.responder_ephemeral_public_key,
@@ -291,7 +293,7 @@ impl ResponderAwaitingActOneState {
 
         Ok((
             Some(Act::Two(act_two)),
-            HandshakeState::ResponderAwaitingActThree(ResponderAwaitingActThreeState {
+            NoiseXkState::ResponderAwaitingActThree(ResponderAwaitingActThreeState {
                 hash,
                 responder_ephemeral_private_key,
                 chaining_key,
@@ -303,9 +305,7 @@ impl ResponderAwaitingActOneState {
 }
 
 impl InitiatorAwaitingActTwoState {
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (receiver)
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-three (sender)
-    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
         let mut act_two_builder = self.act_two_builder;
         let bytes_read = act_two_builder.fill(input);
 
@@ -322,7 +322,7 @@ impl InitiatorAwaitingActTwoState {
             assert_eq!(bytes_read, input.len());
             return Ok((
                 None,
-                HandshakeState::InitiatorAwaitingActTwo(Self {
+                NoiseXkState::InitiatorAwaitingActTwo(Self {
                     initiator_static_private_key: self.initiator_static_private_key,
                     initiator_static_public_key: self.initiator_static_public_key,
                     initiator_ephemeral_private_key: self.initiator_ephemeral_private_key,
@@ -363,7 +363,7 @@ impl InitiatorAwaitingActTwoState {
         )?;
 
         // 2. h = SHA-256(h || c)
-        let hash = concat_then_sha256!(hash, &act_three[1..50]);
+        let hash = sha256!(hash, &act_three[1..50]);
 
         // 3. se = ECDH(s.priv, re)
         let ecdh = ecdh(initiator_static_private_key, responder_ephemeral_public_key);
@@ -385,26 +385,36 @@ impl InitiatorAwaitingActTwoState {
 
         // 7. rn = 0, sn = 0
         // - done by Conduit
-        let transcoder = NoiseTranscoder::with(
+        let encryptor = NoiseEncryptor {
             sending_key,
+            sending_chaining_key: chaining_key,
+            sending_nonce: 0,
+            remote_pubkey: responder_static_public_key,
+        };
+        let decryptor = NoiseDecryptor {
             receiving_key,
-            chaining_key,
-            responder_static_public_key,
-            None,
-        );
+            receiving_chaining_key: chaining_key,
+            receiving_nonce: 0,
+            read_buffer: None,
+            pending_message_length: None,
+            poisoned: false,
+            remote_pubkey: responder_static_public_key,
+        };
 
         // 8. Send m = 0 || c || t
         act_three[0] = 0;
         Ok((
             Some(Act::Three(act_three)),
-            HandshakeState::Complete(transcoder),
+            NoiseXkState::Complete {
+                encryptor,
+                decryptor,
+            },
         ))
     }
 }
 
 impl ResponderAwaitingActThreeState {
-    // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-three (receiver)
-    fn next(self, input: &[u8]) -> Result<(Option<Act>, HandshakeState), HandshakeError> {
+    fn next(self, input: &[u8]) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
         let mut act_three_builder = self.act_three_builder;
         let bytes_read = act_three_builder.fill(input);
 
@@ -414,7 +424,7 @@ impl ResponderAwaitingActThreeState {
             assert_eq!(bytes_read, input.len());
             return Ok((
                 None,
-                HandshakeState::ResponderAwaitingActThree(Self {
+                NoiseXkState::ResponderAwaitingActThree(Self {
                     hash: self.hash,
                     responder_ephemeral_private_key: self.responder_ephemeral_private_key,
                     chaining_key: self.chaining_key,
@@ -457,7 +467,7 @@ impl ResponderAwaitingActThreeState {
         let initiator_pubkey = PublicKey::new(remote_pubkey);
 
         // 5. h = SHA-256(h || c)
-        let hash = concat_then_sha256!(hash, tagged_encrypted_pubkey);
+        let hash = sha256!(hash, tagged_encrypted_pubkey);
 
         // 6. se = ECDH(e.priv, rs)
         let ecdh = ecdh(responder_ephemeral_private_key, initiator_pubkey);
@@ -473,44 +483,55 @@ impl ResponderAwaitingActThreeState {
 
         // 10. rn = 0, sn = 0
         // - done by Conduit
-        let transcoder = NoiseTranscoder::with(
+        let read_buffer = input[bytes_read..].to_vec();
+        let encryptor = NoiseEncryptor {
             sending_key,
+            sending_chaining_key: chaining_key,
+            sending_nonce: 0,
+            remote_pubkey: initiator_pubkey,
+        };
+        let decryptor = NoiseDecryptor {
             receiving_key,
-            chaining_key,
-            initiator_pubkey,
-            // Any remaining data in the read buffer would be encrypted, so transfer
-            // ownership to the Conduit for future use.
-            Some(input[bytes_read..].to_vec()),
-        );
+            receiving_chaining_key: chaining_key,
+            receiving_nonce: 0,
+            read_buffer: Some(read_buffer),
+            pending_message_length: None,
+            poisoned: false,
+            remote_pubkey: initiator_pubkey,
+        };
 
-        Ok((None, HandshakeState::Complete(transcoder)))
+        Ok((
+            None,
+            NoiseXkState::Complete {
+                encryptor,
+                decryptor,
+            },
+        ))
     }
 }
 
 // The handshake state always uses the responder's static public key. When
 // running on the initiator, the initiator provides the remote's static public
 // key and running on the responder they provide their own.
-// https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#handshake-state-initialization
 fn initialize_handshake_state(responder_static_public_key: &PublicKey) -> ([u8; 32], [u8; 32]) {
     let protocol_name = b"Noise_XK_secp256k1_ChaChaPoly_SHA256";
     let prologue = b"lightning";
 
     // 1. h = SHA-256(protocolName)
     // 2. ck = h
-    let chaining_key = concat_then_sha256!(protocol_name);
+    let chaining_key = sha256!(protocol_name);
 
     // 3. h = SHA-256(h || prologue)
-    let hash = concat_then_sha256!(chaining_key, prologue);
+    let hash = sha256!(chaining_key, prologue);
 
     // h = SHA-256(h || responderPublicKey)
-    let hash = concat_then_sha256!(hash, responder_static_public_key.as_slice());
+    let hash = sha256!(hash, responder_static_public_key.as_slice());
 
     (hash, chaining_key)
 }
 
 // Due to the very high similarity of acts 1 and 2, this method is used to
-// process both https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (sender)
-// https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (sender)
+// process both
 fn calculate_act_message(
     local_private_ephemeral_key: SecretKey,
     local_public_ephemeral_key: PublicKey,
@@ -522,7 +543,7 @@ fn calculate_act_message(
     // 1. e = generateKey() (passed in)
     // 2. h = SHA-256(h || e.pub.serializeCompressed())
     let serialized_local_public_key = local_public_ephemeral_key.as_slice();
-    let hash = concat_then_sha256!(hash, &serialized_local_public_key);
+    let hash = sha256!(hash, &serialized_local_public_key);
 
     // 3. ACT1: es = ECDH(e.priv, rs)
     // 3. ACT2: es = ECDH(e.priv, re)
@@ -537,7 +558,7 @@ fn calculate_act_message(
     chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], Some(&mut act_out[34..]))?;
 
     // 6. h = SHA-256(h || c)
-    let hash = concat_then_sha256!(hash, &act_out[34..]);
+    let hash = sha256!(hash, &act_out[34..]);
 
     // Send m = 0 || e.pub.serializeCompressed() || c
     act_out[0] = 0;
@@ -547,8 +568,7 @@ fn calculate_act_message(
 }
 
 // Due to the very high similarity of acts 1 and 2, this method is used to
-// process both https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-one (receiver)
-// https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#act-two (receiver)
+// process both
 fn process_act_message(
     act_bytes: &[u8],
     local_private_key: SecretKey,
@@ -583,7 +603,7 @@ fn process_act_message(
     }
 
     // 4. h = SHA-256(h || re.serializeCompressed())
-    let hash = concat_then_sha256!(hash, ephemeral_public_key_bytes);
+    let hash = sha256!(hash, ephemeral_public_key_bytes);
 
     // 5. Act1: es = ECDH(s.priv, re)
     // 5. Act2: ee = ECDH(e.priv, ee)
@@ -598,15 +618,16 @@ fn process_act_message(
     chacha::decrypt(&temporary_key, 0, &hash, chacha_tag, Some(&mut [0; 0]))?;
 
     // 8. h = SHA-256(h || c)
-    let hash = concat_then_sha256!(hash, chacha_tag);
+    let hash = sha256!(hash, chacha_tag);
 
     Ok((ephemeral_public_key, hash, chaining_key, temporary_key))
 }
 
+// TODO: Replace with ECDH from crypto
 fn ecdh(private_key: SecretKey, public_key: PublicKey) -> SymmetricKey {
     let pk_object = public_key.dh(&private_key).expect("invalid multiplication");
 
-    concat_then_sha256!(pk_object.as_slice())
+    sha256!(pk_object.as_slice())
 }
 
 #[cfg(test)]
@@ -615,13 +636,13 @@ fn ecdh(private_key: SecretKey, public_key: PublicKey) -> SymmetricKey {
 mod test {
     use amplify::hex::{FromHex, ToHex};
 
-    use super::HandshakeState::*;
+    use super::NoiseXkState::*;
     use super::*;
 
     struct TestCtx {
-        initiator: HandshakeState,
+        initiator: NoiseXkState,
         initiator_public_key: PublicKey,
-        responder: HandshakeState,
+        responder: NoiseXkState,
         responder_static_public_key: PublicKey,
         valid_act1: Vec<u8>,
         valid_act2: Vec<u8>,
@@ -805,15 +826,20 @@ mod test {
         let (act3, complete_state) =
             do_next_or_panic!(awaiting_act_two_state, &test_ctx.valid_act2);
 
-        let transcoder = if let Complete(transcoder) = complete_state {
-            transcoder
-        } else {
+        let Complete {
+            encryptor,
+            decryptor,
+        } = complete_state else {
             panic!();
         };
 
         assert_eq!(act3.as_ref(), test_ctx.valid_act3.as_slice());
         assert_eq!(
-            transcoder.remote_pubkey(),
+            encryptor.remote_pubkey,
+            test_ctx.responder_static_public_key
+        );
+        assert_eq!(
+            decryptor.remote_pubkey,
             test_ctx.responder_static_public_key
         );
     }
@@ -834,7 +860,7 @@ mod test {
         assert_matches!(next_state, (None, InitiatorAwaitingActTwo(_)));
         assert_matches!(
             next_state.1.next(act2_partial2).unwrap(),
-            (Some(_), Complete(_))
+            (Some(_), Complete { .. })
         );
     }
 
@@ -888,15 +914,14 @@ mod test {
         let (_act2, awaiting_act_three_state) =
             do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
 
-        let transcoder = if let (None, Complete(transcoder)) =
+        let (None, Complete { encryptor, decryptor }) =
             awaiting_act_three_state.next(&test_ctx.valid_act3).unwrap()
-        {
-            transcoder
-        } else {
+        else {
             panic!();
         };
 
-        assert_eq!(transcoder.remote_pubkey(), test_ctx.initiator_public_key);
+        assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
+        assert_eq!(decryptor.remote_pubkey, test_ctx.initiator_public_key);
     }
 
     // Responder::AwaitingActThree -> None (with extra bytes)
@@ -910,14 +935,14 @@ mod test {
         let mut act3 = test_ctx.valid_act3;
         act3.extend_from_slice(&[2; 100]);
 
-        let conduit =
-            if let (None, Complete(conduit)) = awaiting_act_three_state.next(&act3).unwrap() {
-                conduit
-            } else {
-                panic!();
-            };
+        let (None, Complete { encryptor, decryptor }) =
+            awaiting_act_three_state.next(&act3).unwrap()
+        else {
+            panic!();
+        };
 
-        assert_eq!(conduit.remote_pubkey(), test_ctx.initiator_public_key);
+        assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
+        assert_eq!(decryptor.remote_pubkey, test_ctx.initiator_public_key);
     }
 
     // Responder::AwaitingActThree -> Error (bad version bytes)
@@ -950,7 +975,10 @@ mod test {
 
         let next_state = awaiting_act_three_state.next(act3_partial1).unwrap();
         assert_matches!(next_state, (None, ResponderAwaitingActThree(_)));
-        assert_matches!(next_state.1.next(act3_partial2), Ok((None, Complete(_))));
+        assert_matches!(
+            next_state.1.next(act3_partial2),
+            Ok((None, Complete { .. }))
+        );
     }
 
     // Responder::AwaitingActThree -> Error (invalid hmac)
