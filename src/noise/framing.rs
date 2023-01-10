@@ -4,10 +4,10 @@ pub const KEY_ROTATION_PERIOD: u32 = 1000;
 
 #[derive(Debug)]
 pub struct NoiseEncryptor {
-    sending_key: SymmetricKey,
-    sending_chaining_key: SymmetricKey,
-    sending_nonce: u32,
-    remote_pubkey: secp256k1::PublicKey,
+    pub(in crate::noise) sending_key: SymmetricKey,
+    pub(in crate::noise) sending_chaining_key: SymmetricKey,
+    pub(in crate::noise) sending_nonce: u32,
+    pub(in crate::noise) remote_pubkey: secp256k1::PublicKey,
 }
 
 impl NoiseEncryptor {
@@ -57,15 +57,15 @@ impl NoiseEncryptor {
 
 #[derive(Debug)]
 pub struct NoiseDecryptor {
-    receiving_key: SymmetricKey,
-    receiving_chaining_key: SymmetricKey,
-    receiving_nonce: u32,
+    pub(in crate::noise) receiving_key: SymmetricKey,
+    pub(in crate::noise) receiving_chaining_key: SymmetricKey,
+    pub(in crate::noise) receiving_nonce: u32,
 
-    pending_message_length: Option<usize>,
-    read_buffer: Option<Vec<u8>>,
-    poisoned: bool, /* signal an error has occurred so None is returned on
-                     * iteration after failure */
-    remote_pubkey: secp256k1::PublicKey,
+    pub(in crate::noise) pending_message_length: Option<usize>,
+    pub(in crate::noise) read_buffer: Option<Vec<u8>>,
+    pub(in crate::noise) poisoned: bool, /* signal an error has occurred so None is returned on
+                                          * iteration after failure */
+    pub(in crate::noise) remote_pubkey: secp256k1::PublicKey,
 }
 
 impl NoiseDecryptor {

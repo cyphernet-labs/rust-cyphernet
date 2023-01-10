@@ -18,6 +18,7 @@ use super::ceremony::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
+use crate::noise::framing::NoiseTranscoder;
 use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
@@ -52,7 +53,7 @@ pub enum HandshakeState {
     ResponderAwaitingActOne(ResponderAwaitingActOneState),
     InitiatorAwaitingActTwo(InitiatorAwaitingActTwoState),
     ResponderAwaitingActThree(ResponderAwaitingActThreeState),
-    Complete(Conduit),
+    Complete(NoiseTranscoder),
 }
 
 // Enum dispatch for state machine. Single public interface can statically
@@ -146,15 +147,6 @@ pub struct ResponderAwaitingActThreeState {
     chaining_key: ChainingKey,
     temporary_key: [u8; 32],
     act_three_builder: ActBuilder,
-}
-
-#[derive(Debug)]
-pub struct Conduit {
-    sending_key: SymmetricKey,
-    receiving_key: SymmetricKey,
-    chaining_key: SymmetricKey,
-    remote_pubkey: PublicKey,
-    buffer: Vec<u8>,
 }
 
 impl InitiatorStartingState {
@@ -393,19 +385,19 @@ impl InitiatorAwaitingActTwoState {
 
         // 7. rn = 0, sn = 0
         // - done by Conduit
-        let conduit = Conduit {
+        let transcoder = NoiseTranscoder::with(
             sending_key,
             receiving_key,
             chaining_key,
-            remote_pubkey: responder_static_public_key,
-            buffer: vec![],
-        };
+            responder_static_public_key,
+            None,
+        );
 
         // 8. Send m = 0 || c || t
         act_three[0] = 0;
         Ok((
             Some(Act::Three(act_three)),
-            HandshakeState::Complete(conduit),
+            HandshakeState::Complete(transcoder),
         ))
     }
 }
@@ -481,17 +473,17 @@ impl ResponderAwaitingActThreeState {
 
         // 10. rn = 0, sn = 0
         // - done by Conduit
-        let conduit = Conduit {
+        let transcoder = NoiseTranscoder::with(
             sending_key,
             receiving_key,
             chaining_key,
-            remote_pubkey: initiator_pubkey,
+            initiator_pubkey,
             // Any remaining data in the read buffer would be encrypted, so transfer
             // ownership to the Conduit for future use.
-            buffer: input[bytes_read..].to_vec(),
-        };
+            Some(input[bytes_read..].to_vec()),
+        );
 
-        Ok((None, HandshakeState::Complete(conduit)))
+        Ok((None, HandshakeState::Complete(transcoder)))
     }
 }
 
@@ -821,7 +813,7 @@ mod test {
 
         assert_eq!(act3.as_ref(), test_ctx.valid_act3.as_slice());
         assert_eq!(
-            transcoder.remote_pubkey,
+            transcoder.remote_pubkey(),
             test_ctx.responder_static_public_key
         );
     }
@@ -904,7 +896,7 @@ mod test {
             panic!();
         };
 
-        assert_eq!(transcoder.remote_pubkey, test_ctx.initiator_public_key);
+        assert_eq!(transcoder.remote_pubkey(), test_ctx.initiator_public_key);
     }
 
     // Responder::AwaitingActThree -> None (with extra bytes)
@@ -925,7 +917,7 @@ mod test {
                 panic!();
             };
 
-        assert_eq!(conduit.remote_pubkey, test_ctx.initiator_public_key);
+        assert_eq!(conduit.remote_pubkey(), test_ctx.initiator_public_key);
     }
 
     // Responder::AwaitingActThree -> Error (bad version bytes)
