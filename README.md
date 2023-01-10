@@ -18,7 +18,7 @@ like lightning wire protocol, NTLS etc).
 
 
     Language: Rust
-    Minimal compiler version: 1.59
+    Minimal compiler version: 1.60
     Author: Maxim Orlovsky
     Maintained: Cyphernet Association, Switzerland
     Maintainers: Maxim Orlovsky (@dr-orlovsky)
