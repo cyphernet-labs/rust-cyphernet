@@ -26,8 +26,8 @@ use super::AddrParseError;
 use crate::addr::{Host, Localhost};
 
 /// An Internet host name which can be resolved by standard OS means (and thus
-/// accepted by `std::net` methods via use of [`ToSocketAddrs`] trait, when
-/// combined with a port address).
+/// accepted by `std::net` methods via use of [`std::net::ToSocketAddrs`] trait,
+/// when combined with a port address).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]
@@ -67,7 +67,7 @@ impl FromStr for InetHost {
 /// A host name covers multiple types which are not necessarily resolved by an
 /// OS and may require additional name resolvers (like via SOCKS5 etc). The type
 /// doesn't provide an information about the resolver; for that use
-/// [`ProxiedHost`].
+/// [`super::ProxiedHost`].
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(inner)]

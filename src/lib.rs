@@ -42,14 +42,14 @@
 //! - `dns`: enable use of DNS names alongside IP addresses and mixnet names.
 //!
 //! Network addresses provided by the library include the following types:
-//! * [`InetHost`] - IP addr or DNS name
-//! * [`HostName`] - IP, DNS, Tor, I2P, Nym host name (no port or proxy information)
-//! * [`NetAddr`] - any type of host name + port information
-//! * [`PartialAddr`] - any type of host name + optional port, which defaults to generic const if
-//!   not provided
-//! * [`PeerAddr`] - any of the above addresses + node public key for authentication
-//! * [`ProxiedHost`] - host name + proxy (there are IP/DNS w/o proxy and with proxy)
-//! * [`ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
+//! * [`addr::InetHost`] - IP addr or DNS name
+//! * [`addr::HostName`] - IP, DNS, Tor, I2P, Nym host name (no port or proxy information)
+//! * [`addr::NetAddr`] - any type of host name + port information
+//! * [`addr::PartialAddr`] - any type of host name + optional port, which defaults to generic const
+//!   if not provided
+//! * [`addr::PeerAddr`] - any of the above addresses + node public key for authentication
+//! * [`addr::ProxiedHost`] - host name + proxy (there are IP/DNS w/o proxy and with proxy)
+//! * [`addr::ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
 
 #[macro_use]
 extern crate amplify;
