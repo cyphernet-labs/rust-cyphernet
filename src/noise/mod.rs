@@ -1,7 +1,7 @@
 mod chacha;
-mod framing;
+pub mod framing;
 mod hkdf;
-mod xk;
+pub mod xk;
 
 pub type SymmetricKey = [u8; 32];
 
