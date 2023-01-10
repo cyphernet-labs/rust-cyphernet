@@ -1,95 +1,77 @@
-// LNP/BP Noise_XK transport layer security protocol implementation. Part of
-// Internet2 suite of libraries for decentralized, private & censorship-secure
-// Internet.
-//
-// Written in 2020-22 by
-//     Rajarshi Maitra
-//     Maxim Orlovsky
-//
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
-//
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+use chacha20poly1305::aead::{Aead, Payload};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
-use chacha20poly1305::aead::{Aead, NewAead, Payload};
-use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
-
-use crate::EncryptionError;
+use super::EncryptionError;
 
 pub const TAG_SIZE: usize = 16;
 
-// Encrypt a plaintext with associated data using the key and nonce.
-// Returns the encrypted msg by mutating cipher_text array
+fn _nonce(nonce: u64) -> Nonce {
+    let mut chacha_nonce = [0u8; 12];
+    chacha_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
+    *Nonce::from_slice(&chacha_nonce[..])
+}
+
+fn _cypher(key: &[u8]) -> ChaCha20Poly1305 {
+    let key = Key::from_slice(key);
+    ChaCha20Poly1305::new(key)
+}
+
+/// Encrypt a plaintext with associated data using the key and nonce.
+///
+/// # Returns
+///
+/// Returns the encrypted msg, which is also copied to ciphertext array, if
+/// provided.
+///
+/// # Panics
+///
+/// Function panics if `plaintext` and `cyphertext` have different length.
 pub fn encrypt(
     key: &[u8],
     nonce: u64,
     associated_data: &[u8],
     plaintext: &[u8],
-    cipher_text: &mut [u8],
-) -> Result<(), EncryptionError> {
-    let mut chacha_nonce = [0u8; 12];
-    chacha_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
-
-    let nonce = Nonce::from_slice(&chacha_nonce[..]);
-
-    let key = Key::from_slice(key);
-
-    let cipher = ChaCha20Poly1305::new(key);
-
+    ciphertext: Option<&mut [u8]>,
+) -> Result<Vec<u8>, EncryptionError> {
     let payload = Payload {
         msg: plaintext,
         aad: associated_data,
     };
-
-    let encrypted = cipher.encrypt(nonce, payload)?;
-
-    if cipher_text.len() != encrypted.len() {
-        return Err(EncryptionError::ExpectedMessageLenMismatch);
-    }
-    cipher_text.copy_from_slice(&encrypted[..]);
-
-    Ok(())
+    let encrypted = _cypher(key).encrypt(&_nonce(nonce), payload)?;
+    ciphertext.map(|e| e.copy_from_slice(&encrypted));
+    Ok(encrypted)
 }
 
-// Decrypts the ciphertext with key, nonce and associated data
-// Returns the decrypted plaintext
+/// Decrypts the ciphertext with key, nonce and associated data.
+///
+/// # Returns
+///
+/// Returns the decrypted msg, which is also copied to plaintext array, if
+/// provided.
+///
+/// # Panics
+///
+/// Function panics if `plaintext` and `cyphertext` have different length.
 pub fn decrypt(
     key: &[u8],
     nonce: u64,
     associated_data: &[u8],
     ciphertext: &[u8],
-    plain_text: &mut [u8],
-) -> Result<(), EncryptionError> {
-    let mut chacha_nonce = [0u8; 12];
-    chacha_nonce[4..].copy_from_slice(&nonce.to_le_bytes());
-
-    let nonce = Nonce::from_slice(&chacha_nonce[..]);
-
-    let key = Key::from_slice(key);
-
-    let cipher = ChaCha20Poly1305::new(key);
-
+    plaintext: Option<&mut [u8]>,
+) -> Result<Vec<u8>, EncryptionError> {
     let payload = Payload {
         msg: ciphertext,
         aad: associated_data,
     };
-
-    let decrypted = cipher.decrypt(nonce, payload)?;
-
-    if plain_text.len() != decrypted.len() {
-        return Err(EncryptionError::ExpectedMessageLenMismatch);
-    }
-    plain_text.copy_from_slice(&decrypted[..]);
-
-    Ok(())
+    let decrypted = _cypher(key).decrypt(&_nonce(nonce), payload)?;
+    plaintext.map(|d| d.copy_from_slice(&decrypted));
+    Ok(decrypted)
 }
 
 #[cfg(test)]
 mod test {
-    use chacha20poly1305::aead::{Aead, NewAead, AeadInPlace};
-    use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+    use chacha20poly1305::aead::{Aead, AeadInPlace};
+    use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
     #[test]
     fn test1() {

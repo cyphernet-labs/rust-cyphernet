@@ -10,6 +10,30 @@ use super::*;
 #[wrapper(Deref)]
 pub struct SharedSecret([u8; 32]);
 
+impl EcPk for x25519::PublicKey {
+    fn generator() -> Self {
+        x25519::PublicKey::base_point()
+    }
+}
+
+impl EcSk for x25519::SecretKey {
+    type Pk = x25519::PublicKey;
+
+    fn to_pk(&self) -> Self::Pk {
+        self.recover_public_key().expect("invalid secret key")
+    }
+}
+
+impl Ecdh for x25519::SecretKey {
+    type Secret = SharedSecret;
+    type Err = ::ed25519::Error;
+
+    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err> {
+        let ss = pk.dh(&self)?;
+        Ok(SharedSecret(*ss))
+    }
+}
+
 impl Ecdh for PrivateKey {
     type Secret = SharedSecret;
     type Err = ::ed25519::Error;
@@ -22,7 +46,7 @@ impl Ecdh for PrivateKey {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -151,7 +175,7 @@ impl TryFrom<String> for PublicKey {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
 impl PartialOrd for PrivateKey {

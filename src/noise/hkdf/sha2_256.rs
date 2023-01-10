@@ -1,18 +1,3 @@
-// LNP/BP Noise_XK transport layer security protocol implementation. Part of
-// Internet2 suite of libraries for decentralized, private & censorship-secure
-// Internet.
-//
-// Written in 2020-22 by
-//     Rajarshi Maitra
-//     Maxim Orlovsky
-//
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
-//
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
-
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 
@@ -32,7 +17,7 @@ fn hmac_sha256(
 
 /// Implements HKDF defined in [RFC 5869](https://tools.ietf.org/html/rfc5869pub).
 /// Returns the first 64 octets as two 32 byte arrays.
-pub(super) fn derive(salt: &[u8], ikm: &[u8]) -> ([u8; 32], [u8; 32]) {
+pub(crate) fn derive(salt: &[u8], ikm: &[u8]) -> ([u8; 32], [u8; 32]) {
     // 2.1.  Notation
     //
     // HMAC-Hash denotes the HMAC function [HMAC] instantiated with hash
