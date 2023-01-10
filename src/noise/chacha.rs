@@ -1,5 +1,5 @@
-use chacha20poly1305::aead::{Aead, NewAead, Payload};
-use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use chacha20poly1305::aead::{Aead, Payload};
+use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
 use super::EncryptionError;
 
@@ -72,8 +72,8 @@ pub fn decrypt(
 
 #[cfg(test)]
 mod test {
-    use chacha20poly1305::aead::{Aead, AeadInPlace, NewAead};
-    use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+    use chacha20poly1305::aead::{Aead, AeadInPlace};
+    use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
     #[test]
     fn test1() {
