@@ -47,7 +47,7 @@ impl Ecdh for x25519::SecretKey {
     type Err = ::ed25519::Error;
 
     fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err> {
-        let ss = pk.dh(&self)?;
+        let ss = pk.dh(self)?;
         Ok(SharedSecret(*ss))
     }
 }
@@ -96,7 +96,7 @@ impl PublicKey {
         buf[..2].copy_from_slice(&Self::MULTICODEC_TYPE);
         buf[2..].copy_from_slice(self.0.deref());
 
-        multibase::encode(multibase::Base::Base58Btc, &buf)
+        multibase::encode(multibase::Base::Base58Btc, buf)
     }
 
     #[cfg(feature = "pem")]

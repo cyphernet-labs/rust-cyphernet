@@ -624,7 +624,7 @@ fn calculate_act_message(
 
     // Send m = 0 || e.pub.serializeCompressed() || c
     act_out[0] = 0;
-    act_out[1..(PUBKEY_LEN + 1)].copy_from_slice(&serialized_local_public_key);
+    act_out[1..(PUBKEY_LEN + 1)].copy_from_slice(serialized_local_public_key);
 
     Ok((hash, chaining_key, temporary_key))
 }

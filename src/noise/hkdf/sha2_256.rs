@@ -64,9 +64,9 @@ pub(crate) fn derive(salt: &[u8], ikm: &[u8]) -> ([u8; 32], [u8; 32]) {
     // where:
     // T(0) = empty string (zero length)
     // T(1) = HMAC-Hash(PRK, T(0) | info | 0x01)
-    let t1 = hmac_sha256(&prk, [&[1]]);
+    let t1 = hmac_sha256(prk, [&[1]]);
     // T(2) = HMAC-Hash(PRK, T(1) | info | 0x02)
-    let t2 = hmac_sha256(&prk, [&t1[..], &[2][..]]);
+    let t2 = hmac_sha256(prk, [&t1[..], &[2][..]]);
 
     (t1, t2)
 }

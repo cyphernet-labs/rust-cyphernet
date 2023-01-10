@@ -44,7 +44,7 @@ impl From<ed25519::PublicKey> for OnionAddrV3 {
         let mut h = sha3::Sha3_256::default();
         h.update(b".onion checksum");
         h.update(&pk[..]);
-        h.update(&[3u8]);
+        h.update([3u8]);
         let hash = h.finalize();
         let checksum = u16::from_le_bytes([hash[0], hash[1]]);
         Self { pk, checksum }

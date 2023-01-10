@@ -60,7 +60,9 @@ pub fn encrypt(
         aad: associated_data,
     };
     let encrypted = _cypher(key).encrypt(&_nonce(nonce), payload)?;
-    ciphertext.map(|e| e.copy_from_slice(&encrypted));
+    if let Some(e) = ciphertext {
+        e.copy_from_slice(&encrypted)
+    }
     Ok(encrypted)
 }
 
@@ -86,7 +88,9 @@ pub fn decrypt(
         aad: associated_data,
     };
     let decrypted = _cypher(key).decrypt(&_nonce(nonce), payload)?;
-    plaintext.map(|d| d.copy_from_slice(&decrypted));
+    if let Some(d) = plaintext {
+        d.copy_from_slice(&decrypted)
+    }
     Ok(decrypted)
 }
 

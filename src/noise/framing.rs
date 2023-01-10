@@ -48,7 +48,7 @@ impl NoiseEncryptor {
         };
 
         let mut ciphertext =
-            vec![0u8; Self::TAGGED_MESSAGE_LENGTH_HEADER_SIZE + length as usize + chacha::TAG_SIZE];
+            vec![0u8; Self::TAGGED_MESSAGE_LENGTH_HEADER_SIZE + length + chacha::TAG_SIZE];
 
         chacha::encrypt(
             &self.sending_key,
