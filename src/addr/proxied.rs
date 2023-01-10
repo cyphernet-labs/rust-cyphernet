@@ -1,87 +1,98 @@
-use crate::addr::ToSocketAddr;
-use crate::crypto::EcPk;
-use std::fmt::{self, Display, Formatter};
-use std::net::{self, ToSocketAddrs};
-use std::str::FromStr;
-use std::{io, option};
+use std::net::{IpAddr, ToSocketAddrs};
 
-use super::{PeerAddr, SocketAddr};
+use super::Addr;
+use crate::addr::{Host, HostName, InetHost, NetAddr};
 
-use super::{Addr, AddrParseError};
+/// A hack to apply feature gates to the generic defaults
+#[cfg(feature = "dns")]
+type DefaultAddr = NetAddr<InetHost>;
+#[cfg(not(feature = "dns"))]
+type DefaultAddr = NetAddr<IpAddr>;
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+/// An host which should be accessed via a proxy - or accessed directly.
+#[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ProxiedAddr<A: Addr = net::SocketAddr> {
-    pub proxy_addr: net::SocketAddr,
+#[non_exhaustive]
+pub enum ProxiedHost<P: ToSocketAddrs + Addr = DefaultAddr> {
+    #[cfg(feature = "dns")]
+    #[from]
+    #[from(IpAddr)]
+    #[from(std::net::Ipv4Addr)]
+    #[from(std::net::Ipv6Addr)]
+    Native(InetHost),
+
+    #[cfg(not(feature = "dns"))]
+    #[from(IpAddr)]
+    #[from(Ipv4Addr)]
+    #[from(Ipv6Addr)]
+    Native(IpAddr),
+
+    Ip(IpAddr, P),
+
+    #[cfg(feature = "dns")]
+    Dns(String, P),
+
+    #[cfg(feature = "tor")]
+    Tor(super::tor::OnionAddrV3, P),
+
+    #[cfg(feature = "i2p")]
+    I2p(super::i2p::I2pAddr, P),
+
+    #[cfg(feature = "nym")]
+    Nym(super::nym::NymAddr, P),
+}
+
+impl<P: ToSocketAddrs + Addr> Host for ProxiedHost<P> {}
+
+impl<P: ToSocketAddrs + Addr> ProxiedHost<P> {
+    pub fn with_proxy(host: HostName, proxy: P) -> Self {
+        match host {
+            HostName::Ip(ip) => ProxiedHost::Ip(ip, proxy),
+            #[cfg(feature = "dns")]
+            HostName::Dns(dns) => ProxiedHost::Dns(dns, proxy),
+            #[cfg(feature = "tor")]
+            HostName::Tor(tor) => ProxiedHost::Tor(tor, proxy),
+            #[cfg(feature = "i2p")]
+            HostName::I2p(i2p) => ProxiedHost::I2p(i2p, proxy),
+            #[cfg(feature = "nym")]
+            HostName::Nym(nym) => ProxiedHost::Nym(nym, proxy),
+        }
+    }
+
+    pub fn proxy(&self) -> Option<&P> {
+        match self {
+            ProxiedHost::Native(_) => None,
+            ProxiedHost::Ip(_, proxy) => Some(proxy),
+            #[cfg(feature = "dns")]
+            ProxiedHost::Dns(_, proxy) => Some(proxy),
+            #[cfg(feature = "tor")]
+            ProxiedHost::Tor(_, proxy) => Some(proxy),
+            #[cfg(feature = "i2p")]
+            ProxiedHost::I2p(_, proxy) => Some(proxy),
+            #[cfg(feature = "nym")]
+            ProxiedHost::Nym(_, proxy) => Some(proxy),
+        }
+    }
+}
+
+/// An address which must be accessed through proxy. Usually this is SOCLS5
+/// proxy, but at the type level there is no information about the specific
+/// proxy type which should be used (however they may contained within the
+/// generic type parameter `A`).
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct ProxiedAddr<A: Addr = NetAddr<HostName>> {
+    #[cfg(feature = "dns")]
+    pub proxy_addr: NetAddr<InetHost>,
+    #[cfg(not(feature = "dns"))]
+    pub proxy_addr: SocketAddr,
     pub remote_addr: A,
 }
+
+impl<A: Addr> Host for ProxiedAddr<A> {}
 
 impl<A: Addr> Addr for ProxiedAddr<A> {
     fn port(&self) -> u16 {
         self.remote_addr.port()
-    }
-}
-
-impl<A: Addr> ToSocketAddr for ProxiedAddr<A> {
-    fn to_socket_addr(&self) -> net::SocketAddr {
-        self.proxy_addr
-    }
-}
-
-impl<A> ToSocketAddrs for ProxiedAddr<A>
-where
-    A: Addr,
-{
-    type Iter = option::IntoIter<net::SocketAddr>;
-
-    fn to_socket_addrs(&self) -> io::Result<option::IntoIter<net::SocketAddr>> {
-        Ok(Some(self.to_socket_addr()).into_iter())
-    }
-}
-
-impl<const DEFAULT_PORT: u16> From<ProxiedAddr<SocketAddr<DEFAULT_PORT>>>
-    for ProxiedAddr<net::SocketAddr>
-{
-    fn from(addr: ProxiedAddr<SocketAddr<DEFAULT_PORT>>) -> Self {
-        ProxiedAddr {
-            proxy_addr: addr.proxy_addr,
-            remote_addr: addr.remote_addr.into(),
-        }
-    }
-}
-
-impl<Id: EcPk, const DEFAULT_PORT: u16> From<ProxiedAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>>
-    for ProxiedAddr<PeerAddr<Id, net::SocketAddr>>
-{
-    fn from(addr: ProxiedAddr<PeerAddr<Id, SocketAddr<DEFAULT_PORT>>>) -> Self {
-        ProxiedAddr {
-            proxy_addr: addr.proxy_addr,
-            remote_addr: addr.remote_addr.into(),
-        }
-    }
-}
-
-impl<A: Addr + Display> Display for ProxiedAddr<A> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "socks5h://{}/{}", self.proxy_addr, self.remote_addr)
-    }
-}
-
-impl<A: Addr + FromStr> FromStr for ProxiedAddr<A> {
-    type Err = AddrParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !s.starts_with("socks5h://") {
-            return Err(AddrParseError::InvalidUrlScheme("socks5h://"));
-        }
-        if let Some((proxy, remote)) = s[10..].split_once('/') {
-            Ok(ProxiedAddr {
-                proxy_addr: net::SocketAddr::from_str(proxy)?,
-                remote_addr: A::from_str(remote)
-                    .map_err(|_| AddrParseError::UnknownAddressFormat)?,
-            })
-        } else {
-            return Err(AddrParseError::UnknownAddressFormat);
-        }
     }
 }
