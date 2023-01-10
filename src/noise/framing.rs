@@ -1,12 +1,11 @@
-use crate::noise::xk::NoiseXkState;
-use crate::noise::{Handshake, HandshakeError};
 use ed25519::x25519::PublicKey;
 
 use super::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
+use crate::noise::{Handshake, HandshakeError};
 
 pub const KEY_ROTATION_PERIOD: u32 = 1000;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NoiseEncryptor {
     pub(in crate::noise) sending_key: SymmetricKey,
     pub(in crate::noise) sending_chaining_key: SymmetricKey,
@@ -59,7 +58,7 @@ impl NoiseEncryptor {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NoiseDecryptor {
     pub(in crate::noise) receiving_key: SymmetricKey,
     pub(in crate::noise) receiving_chaining_key: SymmetricKey,
@@ -220,7 +219,7 @@ pub struct IncompleteHandshake;
 pub trait NoiseState: Sized {
     type Act: Handshake;
 
-    fn advance_handshake(self, input: &[u8]) -> Result<(Option<Self::Act>, Self), HandshakeError>;
+    fn advance_handshake(&mut self, input: &[u8]) -> Result<Option<Self::Act>, HandshakeError>;
 
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self;
     fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake>;
@@ -253,13 +252,8 @@ pub struct NoiseTranscoder<S: NoiseState> {
 impl<S: NoiseState> NoiseState for NoiseTranscoder<S> {
     type Act = S::Act;
 
-    fn advance_handshake(
-        mut self,
-        input: &[u8],
-    ) -> Result<(Option<Self::Act>, Self), HandshakeError> {
-        let (act, state) = self.state.advance_handshake(input)?;
-        self.state = state;
-        Ok((act, self))
+    fn advance_handshake(&mut self, input: &[u8]) -> Result<Option<Self::Act>, HandshakeError> {
+        self.state.advance_handshake(input)
     }
 
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {

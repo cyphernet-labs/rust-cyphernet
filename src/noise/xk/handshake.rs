@@ -37,7 +37,7 @@ macro_rules! sha256 {
 	}}
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum NoiseXkState {
     InitiatorStarting(InitiatorStartingState),
     ResponderAwaitingActOne(ResponderAwaitingActOneState),
@@ -113,17 +113,17 @@ impl NoiseState for NoiseXkState {
         }
     }
 
-    fn advance_handshake(
-        self,
-        input: &[u8],
-    ) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
-        match self {
+    fn advance_handshake(&mut self, input: &[u8]) -> Result<Option<Act>, HandshakeError> {
+        // TODO: Find a way of doing this w/o clone
+        let (act, clone) = match self.clone() {
             NoiseXkState::InitiatorStarting(state) => state.next(),
             NoiseXkState::ResponderAwaitingActOne(state) => state.next(input),
             NoiseXkState::InitiatorAwaitingActTwo(state) => state.next(input),
             NoiseXkState::ResponderAwaitingActThree(state) => state.next(input),
             NoiseXkState::Complete { .. } => Err(HandshakeError::Complete),
-        }
+        }?;
+        *self = clone;
+        Ok(act)
     }
 }
 
@@ -164,7 +164,7 @@ impl NoiseXkState {
 }
 
 // Handshake state of the Initiator prior to generating Act 1
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InitiatorStartingState {
     initiator_static_private_key: SecretKey,
     initiator_static_public_key: PublicKey,
@@ -176,7 +176,7 @@ pub struct InitiatorStartingState {
 }
 
 // Handshake state of the Responder prior to receiving Act 1
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ResponderAwaitingActOneState {
     responder_static_private_key: SecretKey,
     responder_ephemeral_private_key: SecretKey,
@@ -187,7 +187,7 @@ pub struct ResponderAwaitingActOneState {
 }
 
 // Handshake state of the Initiator prior to receiving Act 2
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct InitiatorAwaitingActTwoState {
     initiator_static_private_key: SecretKey,
     initiator_static_public_key: PublicKey,
@@ -199,7 +199,7 @@ pub struct InitiatorAwaitingActTwoState {
 }
 
 // Handshake state of the Responder prior to receiving Act 3
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ResponderAwaitingActThreeState {
     hash: [u8; 32],
     responder_ephemeral_private_key: SecretKey,
@@ -704,6 +704,7 @@ fn ecdh(private_key: &SecretKey, public_key: PublicKey) -> SymmetricKey {
 // Reference RFC test vectors for hard-coded values
 // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#appendix-a-transport-test-vectors
 mod test {
+    use crate::noise::EncryptionError;
     use amplify::hex::{FromHex, ToHex};
 
     use super::NoiseXkState::*;
@@ -768,16 +769,6 @@ mod test {
         }
     }
 
-    macro_rules! do_next_or_panic {
-        ($state:expr, $input:expr) => {
-            if let (Some(output_act), next_state) = $state.advance_handshake($input).unwrap() {
-                (output_act, next_state)
-            } else {
-                panic!();
-            }
-        };
-    }
-
     macro_rules! assert_matches {
         ($e:expr, $state_match:pat) => {
             match $e {
@@ -787,14 +778,20 @@ mod test {
         };
     }
 
+    macro_rules! unwrap {
+        ($v:expr) => {
+            $v.unwrap().unwrap()
+        };
+    }
+
     // Initiator::Starting -> AwaitingActTwo
     #[test]
     fn starting_to_awaiting_act_two() {
-        let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        let act1 = unwrap!(test_ctx.initiator.advance_handshake(&[]));
 
         assert_eq!(act1.as_ref(), test_ctx.valid_act1.as_slice());
-        assert_matches!(awaiting_act_two_state, InitiatorAwaitingActTwo(_));
+        assert_matches!(test_ctx.initiator, InitiatorAwaitingActTwo(_));
     }
 
     //PR Comment: We have removed the requirement of empty bytes
@@ -804,14 +801,11 @@ mod test {
     // RFC test vector: transport-responder successful handshake
     #[test]
     fn awaiting_act_one_to_awaiting_act_three() {
-        let test_ctx = TestCtx::new();
-        let (act2, awaiting_act_three_state) = test_ctx
-            .responder
-            .advance_handshake(&test_ctx.valid_act1)
-            .unwrap();
+        let mut test_ctx = TestCtx::new();
+        let act2 = unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
 
-        assert_eq!(act2.unwrap().as_ref(), test_ctx.valid_act2.as_slice());
-        assert_matches!(awaiting_act_three_state, ResponderAwaitingActThree(_));
+        assert_eq!(act2.as_ref(), test_ctx.valid_act2.as_slice());
+        assert_matches!(test_ctx.responder, ResponderAwaitingActThree(_));
     }
 
     // Responder::AwaitingActOne -> AwaitingActThree (bad peer)
@@ -819,12 +813,12 @@ mod test {
     // that is larger than expected it indicates a bad peer
     #[test]
     fn awaiting_act_one_to_awaiting_act_three_input_extra_bytes() {
-        let test_ctx = TestCtx::new();
+        let mut test_ctx = TestCtx::new();
         let mut act1 = test_ctx.valid_act1;
         act1.extend_from_slice(&[1]);
 
         assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
             HandshakeError::InvalidActLen {
                 act: 1,
                 expected: 50,
@@ -839,27 +833,29 @@ mod test {
     // (partial message OK)
     #[test]
     fn awaiting_act_one_to_awaiting_act_three_segmented() {
-        let test_ctx = TestCtx::new();
+        let mut test_ctx = TestCtx::new();
         let act1_partial1 = &test_ctx.valid_act1[..25];
         let act1_partial2 = &test_ctx.valid_act1[25..];
 
         let next_state = test_ctx.responder.advance_handshake(act1_partial1).unwrap();
-        assert_matches!(next_state, (None, ResponderAwaitingActOne(_)));
+        assert_matches!(next_state, None);
+        assert_matches!(test_ctx.responder, ResponderAwaitingActOne(_));
         assert_matches!(
-            next_state.1.advance_handshake(act1_partial2).unwrap(),
-            (Some(_), ResponderAwaitingActThree(_))
+            test_ctx.responder.advance_handshake(act1_partial2).unwrap(),
+            Some(_)
         );
+        assert_matches!(test_ctx.responder, ResponderAwaitingActThree(_))
     }
 
     // Responder::AwaitingActOne -> Error (bad version byte)
     // RFC test vector: transport-responder act1 bad version test
     #[test]
     fn awaiting_act_one_to_awaiting_act_three_input_bad_version() {
-        let test_ctx = TestCtx::new();
+        let mut test_ctx = TestCtx::new();
         let act1 = Vec::<u8>::from_hex("01036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
             HandshakeError::UnexpectedVersion(1)
         );
     }
@@ -869,11 +865,11 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_one_to_awaiting_act_three_invalid_remote_ephemeral_key() {
-        let test_ctx = TestCtx::new();
+        let mut test_ctx = TestCtx::new();
         let act1 = Vec::<u8>::from_hex("00046360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
             HandshakeError::InvalidEphemeralPubkey
         );
     }
@@ -882,11 +878,11 @@ mod test {
     // RFC test vector: transport-responder act1 bad MAC test
     #[test]
     fn awaiting_act_one_to_awaiting_act_three_invalid_hmac() {
-        let test_ctx = TestCtx::new();
+        let mut test_ctx = TestCtx::new();
         let act1 = Vec::<u8>::from_hex("00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).unwrap_err(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -896,16 +892,13 @@ mod test {
     // means any extra data indicates a bad peer.
     #[test]
     fn awaiting_act_two_to_complete_extra_bytes() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
         let mut act2 = test_ctx.valid_act2;
         act2.extend_from_slice(&[1]);
 
         assert_eq!(
-            awaiting_act_two_state
-                .advance_handshake(&act2)
-                .err()
-                .unwrap(),
+            test_ctx.initiator.advance_handshake(&act2).err().unwrap(),
             HandshakeError::InvalidActLen {
                 act: 2,
                 expected: 50,
@@ -918,15 +911,14 @@ mod test {
     // RFC test vector: transport-initiator successful handshake
     #[test]
     fn awaiting_act_two_to_complete() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act3, complete_state) =
-            do_next_or_panic!(awaiting_act_two_state, &test_ctx.valid_act2);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
+        let act3 = unwrap!(test_ctx.initiator.advance_handshake(&test_ctx.valid_act2));
 
         let Complete {
             encryptor,
             decryptor,
-        } = complete_state else {
+        } = test_ctx.initiator else {
             panic!();
         };
 
@@ -947,36 +939,35 @@ mod test {
     // (partial message OK)
     #[test]
     fn awaiting_act_two_to_complete_segmented() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
 
         let act2_partial1 = &test_ctx.valid_act2[..25];
         let act2_partial2 = &test_ctx.valid_act2[25..];
 
-        let next_state = awaiting_act_two_state
-            .advance_handshake(act2_partial1)
-            .unwrap();
-        assert_matches!(next_state, (None, InitiatorAwaitingActTwo(_)));
         assert_matches!(
-            next_state.1.advance_handshake(act2_partial2).unwrap(),
-            (Some(_), Complete { .. })
+            test_ctx.initiator.advance_handshake(act2_partial1),
+            Ok(None)
         );
+        assert_matches!(test_ctx.initiator, InitiatorAwaitingActTwo(_));
+        assert_matches!(
+            test_ctx.initiator.advance_handshake(act2_partial2),
+            Ok(Some(_))
+        );
+        assert_matches!(test_ctx.initiator, Complete { .. });
     }
 
     // Initiator::AwaitingActTwo -> Error (bad version byte)
     // RFC test vector: transport-initiator act2 bad version test
     #[test]
     fn awaiting_act_two_bad_version_byte() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
         let act2 = Vec::<u8>::from_hex("0102466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
-        assert_eq!(
-            awaiting_act_two_state
-                .advance_handshake(&act2)
-                .err()
-                .unwrap(),
-            HandshakeError::UnexpectedVersion(1)
+        assert_matches!(
+            test_ctx.initiator.advance_handshake(&act2),
+            Err(HandshakeError::UnexpectedVersion(1))
         );
     }
 
@@ -985,16 +976,13 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_two_invalid_ephemeral_public_key() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
         let act2 = Vec::<u8>::from_hex("0004466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
-        assert_eq!(
-            awaiting_act_two_state
-                .advance_handshake(&act2)
-                .err()
-                .unwrap(),
-            HandshakeError::InvalidEphemeralPubkey
+        assert_matches!(
+            test_ctx.initiator.advance_handshake(&act2),
+            Err(HandshakeError::InvalidEphemeralPubkey)
         );
     }
 
@@ -1002,16 +990,15 @@ mod test {
     // RFC test vector: transport-initiator act2 bad MAC test
     #[test]
     fn awaiting_act_two_invalid_hmac() {
-        let test_ctx = TestCtx::new();
-        let (_act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.initiator.advance_handshake(&[]));
         let act2 = Vec::<u8>::from_hex("0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
-        assert_eq!(
-            awaiting_act_two_state
-                .advance_handshake(&act2)
-                .err()
-                .unwrap(),
-            HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
+        assert_matches!(
+            test_ctx.initiator.advance_handshake(&act2),
+            Err(HandshakeError::Encryption(EncryptionError::ChaCha(
+                chacha20poly1305::aead::Error
+            )))
         );
     }
 
@@ -1020,15 +1007,14 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_three_to_complete() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
 
-        let (None, Complete { encryptor, decryptor }) =
-            awaiting_act_three_state.advance_handshake(&test_ctx.valid_act3).unwrap()
-        else {
-            panic!();
-        };
+        assert_matches!(
+            test_ctx.responder.advance_handshake(&test_ctx.valid_act3),
+            Ok(None)
+        );
+        let (encryptor, decryptor) = test_ctx.responder.try_into_split().unwrap();
 
         assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
         assert_eq!(decryptor.remote_pubkey, test_ctx.initiator_public_key);
@@ -1040,17 +1026,16 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_three_excess_bytes_after_complete_are_in_conduit() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
-        let mut act3 = test_ctx.valid_act3;
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
+        let mut act3 = test_ctx.valid_act3.clone();
         act3.extend_from_slice(&[2; 100]);
 
-        let (None, Complete { encryptor, decryptor }) =
-            awaiting_act_three_state.advance_handshake(&act3).unwrap()
-        else {
-            panic!();
-        };
+        assert_matches!(
+            test_ctx.responder.advance_handshake(&test_ctx.valid_act3),
+            Ok(None)
+        );
+        let (encryptor, decryptor) = test_ctx.responder.try_into_split().unwrap();
 
         assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
         assert_eq!(decryptor.remote_pubkey, test_ctx.initiator_public_key);
@@ -1060,17 +1045,13 @@ mod test {
     // RFC test vector: transport-responder act3 bad version test
     #[test]
     fn awaiting_act_three_bad_version_bytes() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
         let act3 = Vec::<u8>::from_hex("01b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap();
 
-        assert_eq!(
-            awaiting_act_three_state
-                .advance_handshake(&act3)
-                .err()
-                .unwrap(),
-            HandshakeError::UnexpectedVersion(1)
+        assert_matches!(
+            test_ctx.responder.advance_handshake(&act3),
+            Err(HandshakeError::UnexpectedVersion(1))
         );
     }
 
@@ -1081,37 +1062,35 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_three_to_complete_segmented() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
 
         let act3_partial1 = &test_ctx.valid_act3[..35];
         let act3_partial2 = &test_ctx.valid_act3[35..];
 
-        let next_state = awaiting_act_three_state
-            .advance_handshake(act3_partial1)
-            .unwrap();
-        assert_matches!(next_state, (None, ResponderAwaitingActThree(_)));
+        let next_state = test_ctx.responder.advance_handshake(act3_partial1).unwrap();
+        assert_matches!(next_state, None);
         assert_matches!(
-            next_state.1.advance_handshake(act3_partial2),
-            Ok((None, Complete { .. }))
+            test_ctx.responder.advance_handshake(act3_partial2),
+            Ok(None)
         );
+        assert_matches!(test_ctx.responder, Complete { .. })
     }
 
     // Responder::AwaitingActThree -> Error (invalid hmac)
     // RFC test vector: transport-responder act3 bad MAC for ciphertext test
     #[test]
     fn awaiting_act_three_invalid_hmac() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        test_ctx
+            .responder
+            .advance_handshake(&test_ctx.valid_act1)
+            .unwrap()
+            .unwrap();
         let act3 = Vec::<u8>::from_hex("00c9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state
-                .advance_handshake(&act3)
-                .err()
-                .unwrap(),
+            test_ctx.responder.advance_handshake(&act3).err().unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -1121,16 +1100,16 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_three_invalid_rs() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        test_ctx
+            .responder
+            .advance_handshake(&test_ctx.valid_act1)
+            .unwrap()
+            .unwrap();
         let act3 = Vec::<u8>::from_hex("00bfe3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa2235536ad09a8ee351870c2bb7f78b754a26c6cef79a98d25139c856d7efd252c2ae73c").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state
-                .advance_handshake(&act3)
-                .err()
-                .unwrap(),
+            test_ctx.responder.advance_handshake(&act3).err().unwrap(),
             HandshakeError::InvalidInitiatorPubkey
         );
     }
@@ -1139,16 +1118,16 @@ mod test {
     // RFC test vector: transport-responder act3 bad MAC test
     #[test]
     fn awaiting_act_three_invalid_tag_hmac() {
-        let test_ctx = TestCtx::new();
-        let (_act2, awaiting_act_three_state) =
-            do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
+        let mut test_ctx = TestCtx::new();
+        test_ctx
+            .responder
+            .advance_handshake(&test_ctx.valid_act1)
+            .unwrap()
+            .unwrap();
         let act3 = Vec::<u8>::from_hex("00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139bb").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state
-                .advance_handshake(&act3)
-                .err()
-                .unwrap(),
+            test_ctx.responder.advance_handshake(&act3).err().unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -1158,12 +1137,12 @@ mod test {
     #[should_panic(expected = "nothing to process")]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn initiator_complete_next_fail() {
-        let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, _awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
-        let (_act3, complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
+        let mut test_ctx = TestCtx::new();
+        let act1 = test_ctx.initiator.advance_handshake(&[]).unwrap().unwrap();
+        let act2 = unwrap!(test_ctx.responder.advance_handshake(&act1));
+        let act3 = unwrap!(test_ctx.initiator.advance_handshake(&act2));
 
-        complete_state.advance_handshake(&[]).unwrap();
+        test_ctx.initiator.advance_handshake(&[]).unwrap();
     }
 
     // Initiator::Complete -> Error
@@ -1171,20 +1150,13 @@ mod test {
     #[should_panic(expected = "nothing to process")]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn responder_complete_next_fail() {
-        let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
-        let (act3, _complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
+        let mut test_ctx = TestCtx::new();
+        let act1 = test_ctx.initiator.advance_handshake(&[]).unwrap().unwrap();
+        let act2 = unwrap!(test_ctx.responder.advance_handshake(&act1));
+        let act3 = unwrap!(test_ctx.initiator.advance_handshake(&act2));
 
-        let complete_state = if let (None, complete_state) =
-            awaiting_act_three_state.advance_handshake(&act3).unwrap()
-        {
-            complete_state
-        } else {
-            panic!();
-        };
-
-        complete_state.advance_handshake(&[]).unwrap();
+        unwrap!(test_ctx.responder.advance_handshake(&act3));
+        unwrap!(test_ctx.responder.advance_handshake(&[]));
     }
 
     // Test the Act byte generation against known good hard-coded values in case
@@ -1193,10 +1165,10 @@ mod test {
     #[test]
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn test_acts_against_reference_bytes() {
-        let test_ctx = TestCtx::new();
-        let (act1, awaiting_act_two_state) = do_next_or_panic!(test_ctx.initiator, &[]);
-        let (act2, _awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
-        let (act3, _complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
+        let mut test_ctx = TestCtx::new();
+        let act1 = test_ctx.initiator.advance_handshake(&[]).unwrap().unwrap();
+        let act2 = unwrap!(test_ctx.responder.advance_handshake(&act1));
+        let act3 = unwrap!(test_ctx.initiator.advance_handshake(&act2));
 
         assert_eq!(act1.as_ref().to_hex(),
 				   "00052a50773ac8d91773f2dc9662e12f0defe915e415b8a1c8e20a5a3d6ab2b8435a390834e927487097032fd8abfa794b");

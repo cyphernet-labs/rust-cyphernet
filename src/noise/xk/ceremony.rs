@@ -83,7 +83,7 @@ impl AsRef<[u8]> for Act {
 /// Light wrapper around an Act that allows multiple fill() calls before finally
 /// converting to an Act via Act::from(act_builder). Handles all of the
 /// bookkeeping and edge cases of the array fill
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ActBuilder {
     partial_act: Act,
     write_pos: usize,
