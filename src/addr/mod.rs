@@ -1,21 +1,24 @@
 //! Cyphernet node address types
 
+mod host;
 #[cfg(feature = "i2p")]
 pub mod i2p;
-mod mix;
+mod net;
 #[cfg(feature = "nym")]
 pub mod nym;
 mod p2p;
-// mod proxied;
+mod proxied;
 #[cfg(feature = "tor")]
 pub mod tor;
 
+pub use host::HostName;
 #[cfg(feature = "dns")]
-pub use mix::HostName;
-pub use mix::{HostProxied, MixName, NetAddr, PartialAddr};
+pub use host::InetHost;
+pub use net::{NetAddr, PartialAddr};
 pub use p2p::{PeerAddr, PeerAddrParseError};
-// pub use proxied::ProxiedAddr;
+pub use proxied::{ProxiedAddr, ProxiedHost};
 
+/// Marker trait for all types of host names
 pub trait Host {}
 
 impl Host for std::net::IpAddr {}
