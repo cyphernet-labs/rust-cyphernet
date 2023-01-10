@@ -100,12 +100,14 @@ impl NoiseState for NoiseXkState {
         }
     }
 
-    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake> {
+    fn try_into_split(
+        self,
+    ) -> Result<(NoiseEncryptor, NoiseDecryptor), (Self, IncompleteHandshake)> {
         match self {
             NoiseXkState::InitiatorStarting(_)
             | NoiseXkState::ResponderAwaitingActOne(_)
             | NoiseXkState::InitiatorAwaitingActTwo(_)
-            | NoiseXkState::ResponderAwaitingActThree(_) => Err(IncompleteHandshake),
+            | NoiseXkState::ResponderAwaitingActThree(_) => Err((self, IncompleteHandshake)),
             NoiseXkState::Complete {
                 encryptor,
                 decryptor,

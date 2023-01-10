@@ -226,7 +226,9 @@ pub trait NoiseState: Sized {
     fn try_as_split_mut(
         &mut self,
     ) -> Result<(&mut NoiseEncryptor, &mut NoiseDecryptor), IncompleteHandshake>;
-    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake>;
+    fn try_into_split(
+        self,
+    ) -> Result<(NoiseEncryptor, NoiseDecryptor), (Self, IncompleteHandshake)>;
 
     fn expect_remote_pubkey(&self) -> PublicKey {
         self.try_as_split().unwrap().1.remote_pubkey
@@ -272,8 +274,16 @@ impl<S: NoiseState> NoiseState for NoiseTranscoder<S> {
         self.state.try_as_split_mut()
     }
 
-    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake> {
-        self.state.try_into_split()
+    fn try_into_split(
+        mut self,
+    ) -> Result<(NoiseEncryptor, NoiseDecryptor), (Self, IncompleteHandshake)> {
+        match self.state.try_into_split() {
+            Ok((encryptor, decryptor)) => Ok((encryptor, decryptor)),
+            Err((state, err)) => {
+                self.state = state;
+                Err((self, err))
+            }
+        }
     }
 }
 
