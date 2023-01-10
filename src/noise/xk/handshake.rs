@@ -18,7 +18,7 @@ use super::ceremony::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
-use crate::noise::framing::{NoiseDecryptor, NoiseEncryptor};
+use crate::noise::framing::{IncompleteHandshake, NoiseDecryptor, NoiseEncryptor, NoiseState};
 use crate::noise::xk::ceremony::PUBKEY_LEN;
 use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
@@ -61,6 +61,69 @@ pub enum NoiseXkState {
         encryptor: NoiseEncryptor,
         decryptor: NoiseDecryptor,
     },
+}
+
+impl NoiseXkState {
+    fn expect_as_complete(&self) -> (&NoiseEncryptor, &NoiseDecryptor) {
+        self.try_as_split()
+            .expect("Noise_XK handshake is not complete")
+    }
+    fn expect_as_complete_mut(&mut self) -> (&mut NoiseEncryptor, &mut NoiseDecryptor) {
+        self.try_as_split_mut()
+            .expect("Noise_XK handshake is not complete")
+    }
+}
+impl NoiseState for NoiseXkState {
+    fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {
+        assert_eq!(
+            encryptor.remote_pubkey, decryptor.remote_pubkey,
+            "unrelated Noise encryptor and decryptor objects"
+        );
+        NoiseXkState::Complete {
+            encryptor,
+            decryptor,
+        }
+    }
+
+    fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake> {
+        match self {
+            NoiseXkState::InitiatorStarting(_)
+            | NoiseXkState::ResponderAwaitingActOne(_)
+            | NoiseXkState::InitiatorAwaitingActTwo(_)
+            | NoiseXkState::ResponderAwaitingActThree(_) => Err(IncompleteHandshake),
+            NoiseXkState::Complete {
+                encryptor,
+                decryptor,
+            } => Ok((encryptor, decryptor)),
+        }
+    }
+    fn try_as_split_mut(
+        &mut self,
+    ) -> Result<(&mut NoiseEncryptor, &mut NoiseDecryptor), IncompleteHandshake> {
+        match self {
+            NoiseXkState::InitiatorStarting(_)
+            | NoiseXkState::ResponderAwaitingActOne(_)
+            | NoiseXkState::InitiatorAwaitingActTwo(_)
+            | NoiseXkState::ResponderAwaitingActThree(_) => Err(IncompleteHandshake),
+            NoiseXkState::Complete {
+                encryptor,
+                decryptor,
+            } => Ok((encryptor, decryptor)),
+        }
+    }
+
+    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake> {
+        match self {
+            NoiseXkState::InitiatorStarting(_)
+            | NoiseXkState::ResponderAwaitingActOne(_)
+            | NoiseXkState::InitiatorAwaitingActTwo(_)
+            | NoiseXkState::ResponderAwaitingActThree(_) => Err(IncompleteHandshake),
+            NoiseXkState::Complete {
+                encryptor,
+                decryptor,
+            } => Ok((encryptor, decryptor)),
+        }
+    }
 }
 
 // Enum dispatch for state machine. Single public interface can statically

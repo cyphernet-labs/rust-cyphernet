@@ -1,3 +1,4 @@
+use crate::noise::xk::NoiseXkState;
 use ed25519::x25519::PublicKey;
 
 use super::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
@@ -49,7 +50,7 @@ impl NoiseEncryptor {
     }
 
     fn increment_nonce(&mut self) {
-        NoiseTranscoder::increment_nonce(
+        increment_nonce(
             &mut self.sending_nonce,
             &mut self.sending_chaining_key,
             &mut self.sending_key,
@@ -162,7 +163,7 @@ impl NoiseDecryptor {
     }
 
     fn increment_nonce(&mut self) {
-        NoiseTranscoder::increment_nonce(
+        increment_nonce(
             &mut self.receiving_nonce,
             &mut self.receiving_chaining_key,
             &mut self.receiving_key,
@@ -212,6 +213,27 @@ impl Iterator for NoiseDecryptor {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display("incomplete Noise handshake")]
+pub struct IncompleteHandshake;
+pub trait NoiseState {
+    fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self;
+    fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake>;
+    fn try_as_split_mut(
+        &mut self,
+    ) -> Result<(&mut NoiseEncryptor, &mut NoiseDecryptor), IncompleteHandshake>;
+    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake>;
+    fn expect_remote_pubkey(&self) -> PublicKey {
+        self.try_as_split().unwrap().1.remote_pubkey
+    }
+    fn expect_encryptor(&mut self) -> &mut NoiseEncryptor {
+        self.try_as_split_mut().unwrap().0
+    }
+    fn expect_decryptor(&mut self) -> &mut NoiseDecryptor {
+        self.try_as_split_mut().unwrap().1
+    }
+}
+
 /// Returned after a successful handshake to encrypt and decrypt communication
 /// with peer nodes. It should not normally be manually instantiated.
 /// Automatically handles key rotation.
@@ -219,22 +241,39 @@ impl Iterator for NoiseDecryptor {
 /// automatic buffering.
 #[derive(Debug)]
 pub struct NoiseTranscoder {
-    pub encryptor: NoiseEncryptor,
-    pub decryptor: NoiseDecryptor,
+    pub state: NoiseXkState,
+}
+
+impl NoiseState for NoiseTranscoder {
+    fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {
+        NoiseTranscoder {
+            state: NoiseXkState::with_split(encryptor, decryptor),
+        }
+    }
+
+    fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake> {
+        self.state.try_as_split()
+    }
+
+    fn try_as_split_mut(
+        &mut self,
+    ) -> Result<(&mut NoiseEncryptor, &mut NoiseDecryptor), IncompleteHandshake> {
+        self.state.try_as_split_mut()
+    }
+
+    fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake> {
+        self.state.try_into_split()
+    }
 }
 
 impl NoiseTranscoder {
-    pub fn remote_pubkey(&self) -> PublicKey {
-        self.encryptor.remote_pubkey
-    }
-
     /// Encrypt data to be sent to peer
     pub fn encrypt_buf(&mut self, buffer: &[u8]) -> Result<Vec<u8>, EncryptionError> {
-        self.encryptor.encrypt_buf(buffer)
+        self.expect_encryptor().encrypt_buf(buffer)
     }
 
     pub fn read_buf(&mut self, data: &[u8]) {
-        self.decryptor.read_buf(data)
+        self.expect_decryptor().read_buf(data)
     }
 
     /// Decrypt a single message. If data containing more than one message has
@@ -246,20 +285,20 @@ impl NoiseTranscoder {
         &mut self,
         new_data: Option<&[u8]>,
     ) -> Result<Option<Vec<u8>>, EncryptionError> {
-        self.decryptor.decrypt_single_message(new_data)
+        self.expect_decryptor().decrypt_single_message(new_data)
     }
+}
 
-    fn increment_nonce(nonce: &mut u32, chaining_key: &mut SymmetricKey, key: &mut SymmetricKey) {
-        *nonce += 1;
-        if *nonce == KEY_ROTATION_PERIOD {
-            Self::rotate_key(chaining_key, key);
-            *nonce = 0;
-        }
+fn increment_nonce(nonce: &mut u32, chaining_key: &mut SymmetricKey, key: &mut SymmetricKey) {
+    *nonce += 1;
+    if *nonce == KEY_ROTATION_PERIOD {
+        rotate_key(chaining_key, key);
+        *nonce = 0;
     }
+}
 
-    fn rotate_key(chaining_key: &mut SymmetricKey, key: &mut SymmetricKey) {
-        let (new_chaining_key, new_key) = hkdf::derive(chaining_key, key);
-        chaining_key.copy_from_slice(&new_chaining_key);
-        key.copy_from_slice(&new_key);
-    }
+fn rotate_key(chaining_key: &mut SymmetricKey, key: &mut SymmetricKey) {
+    let (new_chaining_key, new_key) = hkdf::derive(chaining_key, key);
+    chaining_key.copy_from_slice(&new_chaining_key);
+    key.copy_from_slice(&new_key);
 }

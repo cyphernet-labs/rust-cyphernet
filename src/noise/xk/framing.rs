@@ -1,32 +1,16 @@
-use std::io;
-
 use ed25519::x25519::{KeyPair, PublicKey, SecretKey};
 
 use super::NoiseXkState;
-use crate::noise::framing::{NoiseDecryptor, NoiseEncryptor, NoiseTranscoder};
-use crate::noise::xk::handshake::HandshakeError;
-use crate::noise::SymmetricKey;
-
-#[derive(Debug, Display, Error, From)]
-#[display(inner)]
-pub enum Error {
-    #[from]
-    Io(io::Error),
-
-    #[from]
-    Handshake(HandshakeError),
-}
+use crate::noise::framing::NoiseTranscoder;
 
 impl NoiseTranscoder {
     #[cfg(feature = "keygen")]
-    pub fn new_initiator(
-        local_key: SecretKey,
-        remote_key: PublicKey,
-        mut connection: impl io::Read + io::Write,
-    ) -> Result<Self, Error> {
+    pub fn with_xk_initiator(local_key: SecretKey, remote_key: PublicKey) -> Self {
         let ephemeral_key = KeyPair::generate().sk;
-        let mut handshake = NoiseXkState::new_initiator(local_key, remote_key, ephemeral_key);
+        let state = NoiseXkState::new_initiator(local_key, remote_key, ephemeral_key);
+        NoiseTranscoder { state }
 
+        /*
         let mut data = vec![];
         loop {
             let (act, h) = handshake.next(&data)?;
@@ -40,16 +24,16 @@ impl NoiseTranscoder {
                 connection.read_exact(&mut data)?;
             }
         }
+         */
     }
 
     #[cfg(feature = "keygen")]
-    pub fn new_responder(
-        local_key: SecretKey,
-        mut connection: impl io::Read + io::Write,
-    ) -> Result<Self, Error> {
+    pub fn with_xk_responder(local_key: SecretKey) -> Self {
         let ephemeral_key = KeyPair::generate().sk;
-        let mut handshake = NoiseXkState::new_responder(local_key, ephemeral_key);
+        let state = NoiseXkState::new_responder(local_key, ephemeral_key);
+        NoiseTranscoder { state }
 
+        /*
         let mut data = vec![0u8; handshake.data_len()];
         connection.read_exact(&mut data)?;
         loop {
@@ -64,5 +48,6 @@ impl NoiseTranscoder {
                 connection.read_exact(&mut data)?;
             }
         }
+         */
     }
 }
