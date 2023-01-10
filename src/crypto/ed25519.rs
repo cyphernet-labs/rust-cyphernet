@@ -65,6 +65,7 @@ impl Ecdh for PrivateKey {
 }
 
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[wrapper(Deref)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -181,6 +182,7 @@ impl TryFrom<String> for PublicKey {
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[wrapper(Deref)]
 pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
@@ -213,7 +215,8 @@ impl PrivateKey {
 }
 
 /// Cryptographic signature.
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[wrapper(Deref)]
 pub struct Signature(::ed25519::Signature);
 
 impl From<::ed25519::Signature> for Signature {
