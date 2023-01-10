@@ -1,3 +1,5 @@
+use ed25519::x25519::PublicKey;
+
 use super::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
 pub const KEY_ROTATION_PERIOD: u32 = 1000;
@@ -7,7 +9,7 @@ pub struct NoiseEncryptor {
     pub(in crate::noise) sending_key: SymmetricKey,
     pub(in crate::noise) sending_chaining_key: SymmetricKey,
     pub(in crate::noise) sending_nonce: u32,
-    pub(in crate::noise) remote_pubkey: secp256k1::PublicKey,
+    pub(in crate::noise) remote_pubkey: PublicKey,
 }
 
 impl NoiseEncryptor {
@@ -65,7 +67,7 @@ pub struct NoiseDecryptor {
     pub(in crate::noise) read_buffer: Option<Vec<u8>>,
     pub(in crate::noise) poisoned: bool, /* signal an error has occurred so None is returned on
                                           * iteration after failure */
-    pub(in crate::noise) remote_pubkey: secp256k1::PublicKey,
+    pub(in crate::noise) remote_pubkey: PublicKey,
 }
 
 impl NoiseDecryptor {
@@ -222,7 +224,7 @@ pub struct NoiseTranscoder {
 }
 
 impl NoiseTranscoder {
-    pub fn remote_pubkey(&self) -> secp256k1::PublicKey {
+    pub fn remote_pubkey(&self) -> PublicKey {
         self.encryptor.remote_pubkey
     }
 

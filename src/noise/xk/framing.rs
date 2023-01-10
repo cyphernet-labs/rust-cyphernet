@@ -1,5 +1,7 @@
 use std::io;
 
+use ed25519::x25519::{KeyPair, PublicKey, SecretKey};
+
 use super::HandshakeState;
 use crate::noise::framing::{NoiseDecryptor, NoiseEncryptor, NoiseTranscoder};
 use crate::noise::xk::handshake::HandshakeError;
@@ -18,15 +20,12 @@ pub enum Error {
 impl NoiseTranscoder {
     #[cfg(feature = "keygen")]
     pub fn new_initiator(
-        local_key: secp256k1::SecretKey,
-        remote_key: secp256k1::PublicKey,
+        local_key: SecretKey,
+        remote_key: PublicKey,
         mut connection: impl io::Read + io::Write,
     ) -> Result<Self, Error> {
-        use secp256k1::rand::thread_rng;
-
-        let mut rng = thread_rng();
-        let ephemeral_key = secp256k1::SecretKey::new(&mut rng);
-        let mut handshake = HandshakeState::new_initiator(local_key, remote_key, &ephemeral_key);
+        let ephemeral_key = KeyPair::generate().sk;
+        let mut handshake = HandshakeState::new_initiator(local_key, remote_key, ephemeral_key);
 
         let mut data = vec![];
         loop {
@@ -45,13 +44,10 @@ impl NoiseTranscoder {
 
     #[cfg(feature = "keygen")]
     pub fn new_responder(
-        local_key: secp256k1::SecretKey,
+        local_key: SecretKey,
         mut connection: impl io::Read + io::Write,
     ) -> Result<Self, Error> {
-        use secp256k1::rand::thread_rng;
-
-        let mut rng = thread_rng();
-        let ephemeral_key = secp256k1::SecretKey::new(&mut rng);
+        let ephemeral_key = KeyPair::generate().sk;
         let mut handshake = HandshakeState::new_responder(local_key, ephemeral_key);
 
         let mut data = vec![0u8; handshake.data_len()];
@@ -75,7 +71,7 @@ impl NoiseTranscoder {
         sending_key: SymmetricKey,
         receiving_key: SymmetricKey,
         chaining_key: SymmetricKey,
-        remote_pubkey: secp256k1::PublicKey,
+        remote_pubkey: PublicKey,
         read_buffer: Option<Vec<u8>>,
     ) -> Self {
         NoiseTranscoder {
@@ -89,7 +85,7 @@ impl NoiseTranscoder {
                 receiving_key,
                 receiving_chaining_key: chaining_key,
                 receiving_nonce: 0,
-                read_buffer: read_buffer,
+                read_buffer,
                 pending_message_length: None,
                 poisoned: false,
                 remote_pubkey,
