@@ -38,16 +38,30 @@ macro_rules! sha256 {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Error, From)]
-#[display(inner)]
+#[display(doc_comments)]
 pub enum HandshakeError {
-    #[from]
-    Other(String),
+    /// unexpected version of noise protocol: {0}.
+    UnexpectedVersion(u8),
+
+    /// invalid remote ephemeral pubkey provided during noise handshake.
+    InvalidEphemeralPubkey,
+
+    /// the initiator has provided an invalid pubkey
+    InvalidInitiatorPubkey,
+
+    /// invalid length of handshake act {act}: expected {expected}, provided {found}
+    InvalidActLen {
+        act: u8,
+        expected: usize,
+        found: usize,
+    },
 
     #[from]
     #[from(chacha20poly1305::aead::Error)]
+    #[display(inner)]
     Encryption(EncryptionError),
 
-    /// Noise_XK handshake is Complete, nothing to process
+    /// noise handshake is complete, nothing to process.
     Complete,
 }
 
@@ -315,7 +329,11 @@ impl ResponderAwaitingActOneState {
         // If a act3 response is received which is 66 bytes, or any other
         // garbage data that would indicate a bad peer connection.
         if bytes_read < input.len() {
-            return Err(HandshakeError::Other("Act One too large".to_string()));
+            return Err(HandshakeError::InvalidActLen {
+                act: 1,
+                expected: input.len(),
+                found: bytes_read,
+            });
         }
 
         // In the event of a partial fill, stay in the same state and wait for
@@ -377,7 +395,11 @@ impl InitiatorAwaitingActTwoState {
         // peer since responder data is required to generate
         // post-authentication messages (so it can't come before we transition)
         if bytes_read < input.len() {
-            return Err(HandshakeError::Other("Act Two too large".to_string()));
+            return Err(HandshakeError::InvalidActLen {
+                act: 2,
+                expected: input.len(),
+                found: bytes_read,
+            });
         }
 
         // In the event of a partial fill, stay in the same state and wait for
@@ -516,7 +538,7 @@ impl ResponderAwaitingActThreeState {
         // abort the connection attempt.
         if version != 0 {
             // this should not crash the process, hence no panic
-            return Err(HandshakeError::Other("unexpected version".to_string()));
+            return Err(HandshakeError::UnexpectedVersion(version));
         }
 
         // 4. rs = decryptWithAD(temp_k2, 1, h, c)
@@ -660,16 +682,14 @@ fn process_act_message(
         if let Ok(public_key) = PublicKey::from_slice(ephemeral_public_key_bytes) {
             public_key
         } else {
-            return Err(HandshakeError::Other(
-                "invalid remote ephemeral public key".to_string(),
-            ));
+            return Err(HandshakeError::InvalidEphemeralPubkey);
         };
 
     // 3. If v is an unrecognized handshake version, then the responder MUST
     // abort the connection attempt
     if version != 0 {
         // this should not crash the process, hence no panic
-        return Err(HandshakeError::Other("unexpected version".to_string()));
+        return Err(HandshakeError::UnexpectedVersion(version));
     }
 
     // 4. h = SHA-256(h || re.serializeCompressed())
@@ -823,7 +843,11 @@ mod test {
 
         assert_eq!(
             test_ctx.responder.next(&act1).err().unwrap(),
-            HandshakeError::Other(String::from("Act One too large"))
+            HandshakeError::InvalidActLen {
+                act: 1,
+                expected: 50,
+                found: 49,
+            }
         );
     }
 
@@ -854,7 +878,7 @@ mod test {
 
         assert_eq!(
             test_ctx.responder.next(&act1).err().unwrap(),
-            HandshakeError::Other(String::from("unexpected version"))
+            HandshakeError::UnexpectedVersion(1)
         );
     }
 
@@ -868,7 +892,7 @@ mod test {
 
         assert_eq!(
             test_ctx.responder.next(&act1).err().unwrap(),
-            HandshakeError::Other(String::from("invalid remote ephemeral public key"))
+            HandshakeError::InvalidEphemeralPubkey
         );
     }
 
@@ -897,7 +921,11 @@ mod test {
 
         assert_eq!(
             awaiting_act_two_state.next(&act2).err().unwrap(),
-            HandshakeError::Other(String::from("Act Two too large"))
+            HandshakeError::InvalidActLen {
+                act: 2,
+                expected: 50,
+                found: 49,
+            }
         );
     }
 
@@ -958,7 +986,7 @@ mod test {
 
         assert_eq!(
             awaiting_act_two_state.next(&act2).err().unwrap(),
-            HandshakeError::Other(String::from("unexpected version"))
+            HandshakeError::UnexpectedVersion(1)
         );
     }
 
@@ -973,7 +1001,7 @@ mod test {
 
         assert_eq!(
             awaiting_act_two_state.next(&act2).err().unwrap(),
-            HandshakeError::Other(String::from("invalid remote ephemeral public key"))
+            HandshakeError::InvalidEphemeralPubkey
         );
     }
 
@@ -1043,7 +1071,7 @@ mod test {
 
         assert_eq!(
             awaiting_act_three_state.next(&act3).err().unwrap(),
-            HandshakeError::Other(String::from("unexpected version"))
+            HandshakeError::UnexpectedVersion(1)
         );
     }
 
@@ -1096,7 +1124,7 @@ mod test {
 
         assert_eq!(
             awaiting_act_three_state.next(&act3).err().unwrap(),
-            HandshakeError::Other(String::from("invalid remote public key"))
+            HandshakeError::InvalidInitiatorPubkey
         );
     }
 
