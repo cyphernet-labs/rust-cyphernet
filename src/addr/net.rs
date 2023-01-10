@@ -1,3 +1,24 @@
+// Set of libraries for privacy-preserving networking apps
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, ToSocketAddrs};
 use std::str::FromStr;
@@ -24,14 +45,11 @@ impl<H: Localhost> NetAddr<H> {
 impl<H: Host> Host for NetAddr<H> {}
 
 impl<H: Host> Addr for NetAddr<H> {
-    fn port(&self) -> u16 {
-        self.port
-    }
+    fn port(&self) -> u16 { self.port }
 }
 
 impl<H: Host> Display for NetAddr<H>
-where
-    H: Display,
+where H: Display
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.host, f)?;
@@ -58,8 +76,7 @@ where
 }
 
 impl<H: Host> From<SocketAddr> for NetAddr<H>
-where
-    H: From<IpAddr>,
+where H: From<IpAddr>
 {
     fn from(socket_addr: SocketAddr) -> Self {
         NetAddr {
@@ -70,8 +87,7 @@ where
 }
 
 impl<H: Host> From<SocketAddrV4> for NetAddr<H>
-where
-    H: From<Ipv4Addr>,
+where H: From<Ipv4Addr>
 {
     fn from(socket_addr: SocketAddrV4) -> Self {
         NetAddr {
@@ -82,8 +98,7 @@ where
 }
 
 impl<H: Host> From<SocketAddrV6> for NetAddr<H>
-where
-    H: From<Ipv6Addr>,
+where H: From<Ipv6Addr>
 {
     fn from(socket_addr: SocketAddrV6) -> Self {
         NetAddr {
@@ -94,31 +109,22 @@ where
 }
 
 impl ToSocketAddr for NetAddr<IpAddr> {
-    fn to_socket_addr(&self) -> SocketAddr {
-        SocketAddr::new(self.host, self.port)
-    }
+    fn to_socket_addr(&self) -> SocketAddr { SocketAddr::new(self.host, self.port) }
 }
 
 impl ToSocketAddr for NetAddr<Ipv4Addr> {
-    fn to_socket_addr(&self) -> SocketAddr {
-        SocketAddr::new(self.host.into(), self.port)
-    }
+    fn to_socket_addr(&self) -> SocketAddr { SocketAddr::new(self.host.into(), self.port) }
 }
 
 impl ToSocketAddr for NetAddr<Ipv6Addr> {
-    fn to_socket_addr(&self) -> SocketAddr {
-        SocketAddr::new(self.host.into(), self.port)
-    }
+    fn to_socket_addr(&self) -> SocketAddr { SocketAddr::new(self.host.into(), self.port) }
 }
 
 impl ToSocketAddrs for NetAddr<IpAddr> {
     type Iter = vec::IntoIter<SocketAddr>;
 
     fn to_socket_addrs(&self) -> io::Result<Self::Iter> {
-        Ok(SocketAddr::new(self.host, self.port)
-            .to_socket_addrs()?
-            .collect::<Vec<_>>()
-            .into_iter())
+        Ok(SocketAddr::new(self.host, self.port).to_socket_addrs()?.collect::<Vec<_>>().into_iter())
     }
 }
 
@@ -156,8 +162,7 @@ impl<H: Localhost, const DEFAULT_PORT: u16> PartialAddr<H, DEFAULT_PORT> {
 impl<H: Host, const DEFAULT_PORT: u16> Host for PartialAddr<H, DEFAULT_PORT> {}
 
 impl<H: Host, const DEFAULT_PORT: u16> Localhost for PartialAddr<H, DEFAULT_PORT>
-where
-    H: Localhost,
+where H: Localhost
 {
     fn localhost() -> Self {
         PartialAddr {
@@ -168,9 +173,7 @@ where
 }
 
 impl<H: Host, const DEFAULT_PORT: u16> Addr for PartialAddr<H, DEFAULT_PORT> {
-    fn port(&self) -> u16 {
-        self.port.unwrap_or(DEFAULT_PORT)
-    }
+    fn port(&self) -> u16 { self.port.unwrap_or(DEFAULT_PORT) }
 }
 
 impl<H: Host, const DEFAULT_PORT: u16> From<PartialAddr<H, DEFAULT_PORT>> for NetAddr<H> {
@@ -183,8 +186,7 @@ impl<H: Host, const DEFAULT_PORT: u16> From<PartialAddr<H, DEFAULT_PORT>> for Ne
 }
 
 impl<H: Host, const DEFAULT_PORT: u16> Display for PartialAddr<H, DEFAULT_PORT>
-where
-    H: Display,
+where H: Display
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.host, f)?;

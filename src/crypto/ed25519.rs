@@ -1,8 +1,30 @@
-use ::ed25519::x25519;
+// Set of libraries for privacy-preserving networking apps
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::ops::Deref;
 use std::str::FromStr;
+
+use ::ed25519::x25519;
 
 use super::*;
 
@@ -11,17 +33,13 @@ use super::*;
 pub struct SharedSecret([u8; 32]);
 
 impl EcPk for x25519::PublicKey {
-    fn generator() -> Self {
-        x25519::PublicKey::base_point()
-    }
+    fn generator() -> Self { x25519::PublicKey::base_point() }
 }
 
 impl EcSk for x25519::SecretKey {
     type Pk = x25519::PublicKey;
 
-    fn to_pk(&self) -> Self::Pk {
-        self.recover_public_key().expect("invalid secret key")
-    }
+    fn to_pk(&self) -> Self::Pk { self.recover_public_key().expect("invalid secret key") }
 }
 
 impl Ecdh for x25519::SecretKey {
@@ -61,9 +79,7 @@ impl PartialOrd for PublicKey {
 }
 
 impl Ord for PublicKey {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.as_ref().cmp(other.0.as_ref())
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.0.as_ref().cmp(other.0.as_ref()) }
 }
 
 impl PublicKey {
@@ -75,7 +91,6 @@ impl PublicKey {
     /// We use the format specified by the DID `key` method, which is described as:
     ///
     /// `did:key:MULTIBASE(base58-btc, MULTICODEC(public-key-type, raw-public-key-bytes))`
-    ///
     pub fn to_human(&self) -> String {
         let mut buf = [0; 2 + ::ed25519::PublicKey::BYTES];
         buf[..2].copy_from_slice(&Self::MULTICODEC_TYPE);
@@ -95,15 +110,11 @@ impl PublicKey {
     }
 
     #[cfg(feature = "pem")]
-    pub fn to_pem(&self) -> String {
-        self.0.to_pem()
-    }
+    pub fn to_pem(&self) -> String { self.0.to_pem() }
 }
 
 impl From<[u8; 32]> for PublicKey {
-    fn from(other: [u8; 32]) -> Self {
-        Self(::ed25519::PublicKey::new(other))
-    }
+    fn from(other: [u8; 32]) -> Self { Self(::ed25519::PublicKey::new(other)) }
 }
 
 impl TryFrom<&[u8]> for PublicKey {
@@ -140,9 +151,7 @@ impl EcPk for PublicKey {
 }
 
 impl Display for PublicKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.to_human())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.to_human()) }
 }
 
 impl FromStr for PublicKey {
@@ -162,40 +171,30 @@ impl FromStr for PublicKey {
 }
 
 impl From<PublicKey> for String {
-    fn from(other: PublicKey) -> Self {
-        other.to_human()
-    }
+    fn from(other: PublicKey) -> Self { other.to_human() }
 }
 
 impl TryFrom<String> for PublicKey {
     type Error = PublicKeyError;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::from_str(&value)
-    }
+    fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl Ord for PrivateKey {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
-    }
+    fn cmp(&self, other: &Self) -> Ordering { self.0.cmp(&other.0) }
 }
 
 impl EcSk for PrivateKey {
     type Pk = PublicKey;
 
-    fn to_pk(&self) -> PublicKey {
-        self.0.public_key().into()
-    }
+    fn to_pk(&self) -> PublicKey { self.0.public_key().into() }
 }
 
 impl PrivateKey {
@@ -210,9 +209,7 @@ impl PrivateKey {
     }
 
     #[cfg(feature = "pem")]
-    pub fn to_pem(&self) -> String {
-        self.0.to_pem()
-    }
+    pub fn to_pem(&self) -> String { self.0.to_pem() }
 }
 
 /// Cryptographic signature.
@@ -220,15 +217,11 @@ impl PrivateKey {
 pub struct Signature(::ed25519::Signature);
 
 impl From<::ed25519::Signature> for Signature {
-    fn from(other: ::ed25519::Signature) -> Self {
-        Self(other)
-    }
+    fn from(other: ::ed25519::Signature) -> Self { Self(other) }
 }
 
 impl From<[u8; 64]> for Signature {
-    fn from(bytes: [u8; 64]) -> Self {
-        Self(::ed25519::Signature::new(bytes))
-    }
+    fn from(bytes: [u8; 64]) -> Self { Self(::ed25519::Signature::new(bytes)) }
 }
 
 impl TryFrom<&[u8]> for Signature {
@@ -286,9 +279,11 @@ impl FromStr for Signature {
 
 #[cfg(test)]
 mod test {
-    use super::PublicKey;
-    use quickcheck_macros::quickcheck;
     use std::str::FromStr;
+
+    use quickcheck_macros::quickcheck;
+
+    use super::PublicKey;
 
     #[quickcheck]
     fn prop_encode_decode(input: PublicKey) {

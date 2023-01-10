@@ -1,3 +1,25 @@
+// Set of libraries for privacy-preserving networking apps
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2020-2023 by
+//     Rajarshi Maitra
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use chacha20poly1305::aead::{Aead, Payload};
 use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
@@ -81,12 +103,9 @@ mod test {
 
         let nonce = Nonce::from_slice(b"unique nonce"); // 12-bytes; unique per message
 
-        let ciphertext = cipher
-            .encrypt(nonce, b"plaintext message".as_ref())
-            .expect("encryption failure!"); // NOTE: handle this error to avoid panics!
-        let plaintext = cipher
-            .decrypt(nonce, ciphertext.as_ref())
-            .expect("decryption failure!"); // NOTE: handle this error to avoid panics!
+        let ciphertext =
+            cipher.encrypt(nonce, b"plaintext message".as_ref()).expect("encryption failure!"); // NOTE: handle this error to avoid panics!
+        let plaintext = cipher.decrypt(nonce, ciphertext.as_ref()).expect("decryption failure!"); // NOTE: handle this error to avoid panics!
 
         assert_eq!(&plaintext, b"plaintext message");
     }
@@ -103,18 +122,14 @@ mod test {
 
         // Encrypt `buffer` in-place, replacing the plaintext contents with
         // ciphertext
-        cipher
-            .encrypt_in_place(nonce, b"", &mut buffer)
-            .expect("encryption failure!");
+        cipher.encrypt_in_place(nonce, b"", &mut buffer).expect("encryption failure!");
 
         // `buffer` now contains the message ciphertext
         assert_ne!(&buffer, b"plaintext message");
 
         // Decrypt `buffer` in-place, replacing its ciphertext context with the
         // original plaintext
-        cipher
-            .decrypt_in_place(nonce, b"", &mut buffer)
-            .expect("decryption failure!");
+        cipher.decrypt_in_place(nonce, b"", &mut buffer).expect("decryption failure!");
         assert_eq!(&buffer, b"plaintext message");
     }
 }

@@ -1,15 +1,25 @@
-// LNP/BP Core Library implementing LNPBP specifications & standards
-// Written in 2020 by Rajarshi Maitra
-// Refactored in 2022 by Dr Maxim Orlovsky <orlovsky@lnp-bp.org>
+// Set of libraries for privacy-preserving networking apps
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// SPDX-License-Identifier: Apache-2.0
 //
-// You should have received a copy of the MIT License
-// along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// Written in 2019-2023 by
+//     Rajarshi Maitra,
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2020-2021 LNP/BP Standards Association, Switzerland
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use ed25519::x25519::{PublicKey, SecretKey};
 use sha2::{Digest, Sha256};
@@ -19,8 +29,9 @@ use super::ceremony::{
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
 use crate::noise::framing::{IncompleteHandshake, NoiseDecryptor, NoiseEncryptor, NoiseState};
+use crate::noise::hkdf::sha2_256 as hkdf;
 use crate::noise::xk::ceremony::PUBKEY_LEN;
-use crate::noise::{chacha, hkdf::sha2_256 as hkdf, HandshakeError, SymmetricKey};
+use crate::noise::{chacha, HandshakeError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
 // passing bytes around
@@ -128,9 +139,7 @@ impl NoiseState for NoiseXkState {
         }
     }
 
-    fn is_handshake_complete(&self) -> bool {
-        matches!(self, NoiseXkState::Complete { .. })
-    }
+    fn is_handshake_complete(&self) -> bool { matches!(self, NoiseXkState::Complete { .. }) }
 }
 
 // Enum dispatch for state machine. Single public interface can statically
@@ -425,10 +434,7 @@ impl InitiatorAwaitingActTwoState {
         let hash = sha256!(hash, &act_three[1..(17 + PUBKEY_LEN)]);
 
         // 3. se = ECDH(s.priv, re)
-        let ecdh = ecdh(
-            &initiator_static_private_key,
-            responder_ephemeral_public_key,
-        );
+        let ecdh = ecdh(&initiator_static_private_key, responder_ephemeral_public_key);
 
         // 4. ck, temp_k3 = HKDF(ck, se)
         let (chaining_key, temporary_key) = hkdf::derive(&chaining_key, &ecdh);
@@ -465,13 +471,10 @@ impl InitiatorAwaitingActTwoState {
 
         // 8. Send m = 0 || c || t
         act_three[0] = 0;
-        Ok((
-            Some(Act::Three(act_three)),
-            NoiseXkState::Complete {
-                encryptor,
-                decryptor,
-            },
-        ))
+        Ok((Some(Act::Three(act_three)), NoiseXkState::Complete {
+            encryptor,
+            decryptor,
+        }))
     }
 }
 
@@ -562,13 +565,10 @@ impl ResponderAwaitingActThreeState {
             remote_pubkey: initiator_pubkey,
         };
 
-        Ok((
-            None,
-            NoiseXkState::Complete {
-                encryptor,
-                decryptor,
-            },
-        ))
+        Ok((None, NoiseXkState::Complete {
+            encryptor,
+            decryptor,
+        }))
     }
 }
 
@@ -617,13 +617,7 @@ fn calculate_act_message(
 
     // 5. ACT1: c = encryptWithAD(temp_k1, 0, h, zero)
     // 5. ACT2: c = encryptWithAD(temp_k2, 0, h, zero)
-    chacha::encrypt(
-        &temporary_key,
-        0,
-        &hash,
-        &[0; 0],
-        Some(&mut act_out[(PUBKEY_LEN + 1)..]),
-    )?;
+    chacha::encrypt(&temporary_key, 0, &hash, &[0; 0], Some(&mut act_out[(PUBKEY_LEN + 1)..]))?;
 
     // 6. h = SHA-256(h || c)
     let hash = sha256!(hash, &act_out[(PUBKEY_LEN + 1)..]);
@@ -700,11 +694,11 @@ fn ecdh(private_key: &SecretKey, public_key: PublicKey) -> SymmetricKey {
 // Reference RFC test vectors for hard-coded values
 // https://github.com/lightningnetwork/lightning-rfc/blob/master/08-transport.md#appendix-a-transport-test-vectors
 mod test {
-    use crate::noise::EncryptionError;
     use amplify::hex::{FromHex, ToHex};
 
     use super::NoiseXkState::*;
     use super::*;
+    use crate::noise::EncryptionError;
 
     struct TestCtx {
         initiator: NoiseXkState,
@@ -836,10 +830,7 @@ mod test {
         let next_state = test_ctx.responder.advance_handshake(act1_partial1).unwrap();
         assert_matches!(next_state, None);
         assert_matches!(test_ctx.responder, ResponderAwaitingActOne(_));
-        assert_matches!(
-            test_ctx.responder.advance_handshake(act1_partial2).unwrap(),
-            Some(_)
-        );
+        assert_matches!(test_ctx.responder.advance_handshake(act1_partial2).unwrap(), Some(_));
         assert_matches!(test_ctx.responder, ResponderAwaitingActThree(_))
     }
 
@@ -919,14 +910,8 @@ mod test {
         };
 
         assert_eq!(act3.as_ref(), test_ctx.valid_act3.as_slice());
-        assert_eq!(
-            encryptor.remote_pubkey,
-            test_ctx.responder_static_public_key
-        );
-        assert_eq!(
-            decryptor.remote_pubkey,
-            test_ctx.responder_static_public_key
-        );
+        assert_eq!(encryptor.remote_pubkey, test_ctx.responder_static_public_key);
+        assert_eq!(decryptor.remote_pubkey, test_ctx.responder_static_public_key);
     }
 
     // Initiator::AwaitingActTwo -> Complete (segmented calls)
@@ -941,15 +926,9 @@ mod test {
         let act2_partial1 = &test_ctx.valid_act2[..25];
         let act2_partial2 = &test_ctx.valid_act2[25..];
 
-        assert_matches!(
-            test_ctx.initiator.advance_handshake(act2_partial1),
-            Ok(None)
-        );
+        assert_matches!(test_ctx.initiator.advance_handshake(act2_partial1), Ok(None));
         assert_matches!(test_ctx.initiator, InitiatorAwaitingActTwo(_));
-        assert_matches!(
-            test_ctx.initiator.advance_handshake(act2_partial2),
-            Ok(Some(_))
-        );
+        assert_matches!(test_ctx.initiator.advance_handshake(act2_partial2), Ok(Some(_)));
         assert_matches!(test_ctx.initiator, Complete { .. });
     }
 
@@ -992,9 +971,7 @@ mod test {
 
         assert_matches!(
             test_ctx.initiator.advance_handshake(&act2),
-            Err(HandshakeError::Encryption(EncryptionError::ChaCha(
-                chacha20poly1305::aead::Error
-            )))
+            Err(HandshakeError::Encryption(EncryptionError::ChaCha(chacha20poly1305::aead::Error)))
         );
     }
 
@@ -1006,10 +983,7 @@ mod test {
         let mut test_ctx = TestCtx::new();
         unwrap!(test_ctx.responder.advance_handshake(&test_ctx.valid_act1));
 
-        assert_matches!(
-            test_ctx.responder.advance_handshake(&test_ctx.valid_act3),
-            Ok(None)
-        );
+        assert_matches!(test_ctx.responder.advance_handshake(&test_ctx.valid_act3), Ok(None));
         let (encryptor, decryptor) = test_ctx.responder.try_into_split().unwrap();
 
         assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
@@ -1027,10 +1001,7 @@ mod test {
         let mut act3 = test_ctx.valid_act3.clone();
         act3.extend_from_slice(&[2; 100]);
 
-        assert_matches!(
-            test_ctx.responder.advance_handshake(&test_ctx.valid_act3),
-            Ok(None)
-        );
+        assert_matches!(test_ctx.responder.advance_handshake(&test_ctx.valid_act3), Ok(None));
         let (encryptor, decryptor) = test_ctx.responder.try_into_split().unwrap();
 
         assert_eq!(encryptor.remote_pubkey, test_ctx.initiator_public_key);
@@ -1066,10 +1037,7 @@ mod test {
 
         let next_state = test_ctx.responder.advance_handshake(act3_partial1).unwrap();
         assert_matches!(next_state, None);
-        assert_matches!(
-            test_ctx.responder.advance_handshake(act3_partial2),
-            Ok(None)
-        );
+        assert_matches!(test_ctx.responder.advance_handshake(act3_partial2), Ok(None));
         assert_matches!(test_ctx.responder, Complete { .. })
     }
 
@@ -1078,11 +1046,7 @@ mod test {
     #[test]
     fn awaiting_act_three_invalid_hmac() {
         let mut test_ctx = TestCtx::new();
-        test_ctx
-            .responder
-            .advance_handshake(&test_ctx.valid_act1)
-            .unwrap()
-            .unwrap();
+        test_ctx.responder.advance_handshake(&test_ctx.valid_act1).unwrap().unwrap();
         let act3 = Vec::<u8>::from_hex("00c9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap();
 
         assert_eq!(
@@ -1097,11 +1061,7 @@ mod test {
     #[ignore] // TODO: We do not have correct testvec data for curve25519
     fn awaiting_act_three_invalid_rs() {
         let mut test_ctx = TestCtx::new();
-        test_ctx
-            .responder
-            .advance_handshake(&test_ctx.valid_act1)
-            .unwrap()
-            .unwrap();
+        test_ctx.responder.advance_handshake(&test_ctx.valid_act1).unwrap().unwrap();
         let act3 = Vec::<u8>::from_hex("00bfe3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa2235536ad09a8ee351870c2bb7f78b754a26c6cef79a98d25139c856d7efd252c2ae73c").unwrap();
 
         assert_eq!(
@@ -1115,11 +1075,7 @@ mod test {
     #[test]
     fn awaiting_act_three_invalid_tag_hmac() {
         let mut test_ctx = TestCtx::new();
-        test_ctx
-            .responder
-            .advance_handshake(&test_ctx.valid_act1)
-            .unwrap()
-            .unwrap();
+        test_ctx.responder.advance_handshake(&test_ctx.valid_act1).unwrap().unwrap();
         let act3 = Vec::<u8>::from_hex("00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139bb").unwrap();
 
         assert_eq!(

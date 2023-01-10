@@ -1,3 +1,24 @@
+// Set of libraries for privacy-preserving networking apps
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 //! Cyphernet node address types
 
 mod host;
@@ -38,21 +59,15 @@ pub trait Localhost: Host {
 }
 
 impl Localhost for std::net::IpAddr {
-    fn localhost() -> Self {
-        std::net::Ipv4Addr::LOCALHOST.into()
-    }
+    fn localhost() -> Self { std::net::Ipv4Addr::LOCALHOST.into() }
 }
 
 impl Localhost for std::net::Ipv4Addr {
-    fn localhost() -> Self {
-        std::net::Ipv4Addr::LOCALHOST
-    }
+    fn localhost() -> Self { std::net::Ipv4Addr::LOCALHOST }
 }
 
 impl Localhost for std::net::Ipv6Addr {
-    fn localhost() -> Self {
-        std::net::Ipv6Addr::LOCALHOST
-    }
+    fn localhost() -> Self { std::net::Ipv6Addr::LOCALHOST }
 }
 
 pub trait Addr: Host {
@@ -69,15 +84,11 @@ impl Addr for std::net::SocketAddr {
 }
 
 impl Addr for std::net::SocketAddrV4 {
-    fn port(&self) -> u16 {
-        std::net::SocketAddrV4::port(self)
-    }
+    fn port(&self) -> u16 { std::net::SocketAddrV4::port(self) }
 }
 
 impl Addr for std::net::SocketAddrV6 {
-    fn port(&self) -> u16 {
-        std::net::SocketAddrV6::port(self)
-    }
+    fn port(&self) -> u16 { std::net::SocketAddrV6::port(self) }
 }
 
 /*
@@ -118,21 +129,15 @@ pub trait ToSocketAddr {
 }
 
 impl ToSocketAddr for std::net::SocketAddr {
-    fn to_socket_addr(&self) -> std::net::SocketAddr {
-        *self
-    }
+    fn to_socket_addr(&self) -> std::net::SocketAddr { *self }
 }
 
 impl ToSocketAddr for std::net::SocketAddrV4 {
-    fn to_socket_addr(&self) -> std::net::SocketAddr {
-        std::net::SocketAddr::V4(*self)
-    }
+    fn to_socket_addr(&self) -> std::net::SocketAddr { std::net::SocketAddr::V4(*self) }
 }
 
 impl ToSocketAddr for std::net::SocketAddrV6 {
-    fn to_socket_addr(&self) -> std::net::SocketAddr {
-        std::net::SocketAddr::V6(*self)
-    }
+    fn to_socket_addr(&self) -> std::net::SocketAddr { std::net::SocketAddr::V6(*self) }
 }
 
 #[derive(Debug, Display, Error, From)]

@@ -1,8 +1,8 @@
-// LNP/BP Noise_XK transport layer security protocol implementation. Part of
-// Internet2 suite of libraries for decentralized, private & censorship-secure
-// Internet.
+// Set of libraries for privacy-preserving networking apps
 //
-// Written in 2020-22 by
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
 //     Julian Knutsen
 //     Rajarshi Maitra
 //     Arik Sosman
@@ -10,12 +10,17 @@
 //     Antoine Riard
 //     Maxim Orlovsky
 //
-// To the extent possible under law, the author(s) have dedicated all copyright
-// and related and neighboring rights to this software to the public domain
-// worldwide. This software is distributed without any warranty.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// You should have received a copy of the MIT License along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 use std::{cmp, ops};
 
@@ -27,8 +32,9 @@ mod _secp256k1 {
     pub const PUBKEY_LEN: usize = 33;
 }
 
-use crate::noise::Handshake;
 pub use _curve25519::*;
+
+use crate::noise::Handshake;
 
 pub const ACT_ONE_LENGTH: usize = 17 + PUBKEY_LEN;
 pub const ACT_TWO_LENGTH: usize = 17 + PUBKEY_LEN;
@@ -75,9 +81,7 @@ impl ops::Deref for Act {
 impl AsRef<[u8]> for Act {
     /// Allow convenient exposure of the underlying array through as_ref()
     /// Act.as_ref() -> &[u8]
-    fn as_ref(&self) -> &[u8] {
-        self
-    }
+    fn as_ref(&self) -> &[u8] { self }
 }
 
 /// Light wrapper around an Act that allows multiple fill() calls before finally
@@ -129,9 +133,7 @@ impl ActBuilder {
     }
 
     /// Returns true if the Act is finished building (enough bytes via fill())
-    pub fn is_finished(&self) -> bool {
-        self.write_pos == self.partial_act.output_len()
-    }
+    pub fn is_finished(&self) -> bool { self.write_pos == self.partial_act.output_len() }
 }
 
 #[cfg(test)]

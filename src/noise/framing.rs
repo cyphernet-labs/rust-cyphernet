@@ -1,6 +1,28 @@
+// Set of libraries for privacy-preserving networking apps
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+// Written in 2019-2023 by
+//     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
+//
+// Copyright 2022-2023 Cyphernet Association, Switzerland
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use ed25519::x25519::PublicKey;
 
-use super::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
+use super::hkdf::sha2_256 as hkdf;
+use super::{chacha, EncryptionError, SymmetricKey};
 use crate::noise::{Handshake, HandshakeError};
 
 pub const KEY_ROTATION_PERIOD: u32 = 1000;
@@ -89,11 +111,8 @@ impl NoiseDecryptor {
         &mut self,
         new_data: Option<&[u8]>,
     ) -> Result<Option<Vec<u8>>, EncryptionError> {
-        let mut read_buffer = if let Some(buffer) = self.read_buffer.take() {
-            buffer
-        } else {
-            Vec::new()
-        };
+        let mut read_buffer =
+            if let Some(buffer) = self.read_buffer.take() { buffer } else { Vec::new() };
 
         if let Some(data) = new_data {
             read_buffer.extend_from_slice(data);
@@ -220,15 +239,9 @@ pub trait NoiseState: Sized {
         self,
     ) -> Result<(NoiseEncryptor, NoiseDecryptor), (Self, IncompleteHandshake)>;
 
-    fn expect_remote_pubkey(&self) -> PublicKey {
-        self.try_as_split().unwrap().1.remote_pubkey
-    }
-    fn expect_encryptor(&mut self) -> &mut NoiseEncryptor {
-        self.try_as_split_mut().unwrap().0
-    }
-    fn expect_decryptor(&mut self) -> &mut NoiseDecryptor {
-        self.try_as_split_mut().unwrap().1
-    }
+    fn expect_remote_pubkey(&self) -> PublicKey { self.try_as_split().unwrap().1.remote_pubkey }
+    fn expect_encryptor(&mut self) -> &mut NoiseEncryptor { self.try_as_split_mut().unwrap().0 }
+    fn expect_decryptor(&mut self) -> &mut NoiseDecryptor { self.try_as_split_mut().unwrap().1 }
 }
 
 /// Returned after a successful handshake to encrypt and decrypt communication
@@ -248,13 +261,9 @@ impl<S: NoiseState> NoiseState for NoiseTranscoder<S> {
         self.state.advance_handshake(input)
     }
 
-    fn next_handshake_len(&self) -> usize {
-        self.state.next_handshake_len()
-    }
+    fn next_handshake_len(&self) -> usize { self.state.next_handshake_len() }
 
-    fn is_handshake_complete(&self) -> bool {
-        self.state.is_handshake_complete()
-    }
+    fn is_handshake_complete(&self) -> bool { self.state.is_handshake_complete() }
 
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {
         NoiseTranscoder {
@@ -291,9 +300,7 @@ impl<S: NoiseState> NoiseTranscoder<S> {
         self.expect_encryptor().encrypt_buf(buffer)
     }
 
-    pub fn read_buf(&mut self, data: &[u8]) {
-        self.expect_decryptor().read_buf(data)
-    }
+    pub fn read_buf(&mut self, data: &[u8]) { self.expect_decryptor().read_buf(data) }
 
     /// Decrypt a single message. If data containing more than one message has
     /// been received, only the first message will be returned, and the rest
