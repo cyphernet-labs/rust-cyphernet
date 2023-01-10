@@ -11,14 +11,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use ed25519_compact::x25519::{PublicKey, SecretKey};
+use ed25519::x25519::{PublicKey, SecretKey};
 use sha2::{Digest, Sha256};
 
 use super::ceremony::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
-use crate::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
+use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
 // passing bytes around

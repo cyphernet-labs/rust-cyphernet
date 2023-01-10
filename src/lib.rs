@@ -13,5 +13,6 @@ extern crate core;
 
 pub mod addr;
 pub mod crypto;
+pub mod noise;
 #[cfg(test)]
 mod test;

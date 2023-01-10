@@ -168,13 +168,16 @@ version = "0.1.0"
 dependencies = [
  "amplify",
  "base32",
+ "chacha20poly1305",
  "ed25519-compact",
+ "hmac",
  "multibase",
  "quickcheck",
  "quickcheck_macros",
  "rand",
  "secp256k1",
  "serde",
+ "sha2",
  "sha3",
  "socks",
 ]
@@ -299,17 +302,6 @@ dependencies = [
  "base-x",
  "data-encoding",
  "data-encoding-macro",
-]
-
-[[package]]
-name = "noise_xk"
-version = "0.1.0"
-dependencies = [
- "amplify",
- "chacha20poly1305",
- "ed25519-compact",
- "hmac",
- "sha2",
 ]
 
 [[package]]

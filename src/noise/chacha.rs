@@ -1,7 +1,7 @@
 use chacha20poly1305::aead::{Aead, NewAead, Payload};
 use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
 
-use crate::EncryptionError;
+use super::EncryptionError;
 
 pub const TAG_SIZE: usize = 16;
 
