@@ -16,3 +16,38 @@ pub enum EncryptionError {
     #[from]
     ChaCha(chacha20poly1305::aead::Error),
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Display, Error, From)]
+#[display(doc_comments)]
+pub enum HandshakeError {
+    /// unexpected version of noise protocol: {0}.
+    UnexpectedVersion(u8),
+
+    /// invalid remote ephemeral pubkey provided during noise handshake.
+    InvalidEphemeralPubkey,
+
+    /// the initiator has provided an invalid pubkey
+    InvalidInitiatorPubkey,
+
+    /// invalid length of handshake act {act}: expected {expected}, provided {found}
+    InvalidActLen {
+        act: u8,
+        expected: usize,
+        found: usize,
+    },
+
+    #[from]
+    #[from(chacha20poly1305::aead::Error)]
+    #[display(inner)]
+    Encryption(EncryptionError),
+
+    /// noise handshake is complete, nothing to process.
+    Complete,
+}
+
+pub trait Handshake: AsRef<[u8]> {
+    /// Returns the size of output data for the handshake act
+    fn output_len(&self) -> usize {
+        self.as_ref().len()
+    }
+}

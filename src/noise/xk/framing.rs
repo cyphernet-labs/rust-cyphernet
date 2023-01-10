@@ -3,7 +3,7 @@ use ed25519::x25519::{KeyPair, PublicKey, SecretKey};
 use super::NoiseXkState;
 use crate::noise::framing::NoiseTranscoder;
 
-impl NoiseTranscoder {
+impl NoiseTranscoder<NoiseXkState> {
     #[cfg(feature = "keygen")]
     pub fn with_xk_initiator(local_key: SecretKey, remote_key: PublicKey) -> Self {
         let ephemeral_key = KeyPair::generate().sk;

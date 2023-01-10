@@ -1,4 +1,5 @@
 use crate::noise::xk::NoiseXkState;
+use crate::noise::{Handshake, HandshakeError};
 use ed25519::x25519::PublicKey;
 
 use super::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
@@ -216,13 +217,18 @@ impl Iterator for NoiseDecryptor {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display("incomplete Noise handshake")]
 pub struct IncompleteHandshake;
-pub trait NoiseState {
+pub trait NoiseState: Sized {
+    type Act: Handshake;
+
+    fn advance_handshake(self, input: &[u8]) -> Result<(Option<Self::Act>, Self), HandshakeError>;
+
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self;
     fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake>;
     fn try_as_split_mut(
         &mut self,
     ) -> Result<(&mut NoiseEncryptor, &mut NoiseDecryptor), IncompleteHandshake>;
     fn try_into_split(self) -> Result<(NoiseEncryptor, NoiseDecryptor), IncompleteHandshake>;
+
     fn expect_remote_pubkey(&self) -> PublicKey {
         self.try_as_split().unwrap().1.remote_pubkey
     }
@@ -240,14 +246,25 @@ pub trait NoiseState {
 /// For decryption, it is recommended to call `decrypt_message_stream` for
 /// automatic buffering.
 #[derive(Debug)]
-pub struct NoiseTranscoder {
-    pub state: NoiseXkState,
+pub struct NoiseTranscoder<S: NoiseState> {
+    pub state: S,
 }
 
-impl NoiseState for NoiseTranscoder {
+impl<S: NoiseState> NoiseState for NoiseTranscoder<S> {
+    type Act = S::Act;
+
+    fn advance_handshake(
+        mut self,
+        input: &[u8],
+    ) -> Result<(Option<Self::Act>, Self), HandshakeError> {
+        let (act, state) = self.state.advance_handshake(input)?;
+        self.state = state;
+        Ok((act, self))
+    }
+
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {
         NoiseTranscoder {
-            state: NoiseXkState::with_split(encryptor, decryptor),
+            state: S::with_split(encryptor, decryptor),
         }
     }
 
@@ -266,7 +283,7 @@ impl NoiseState for NoiseTranscoder {
     }
 }
 
-impl NoiseTranscoder {
+impl<S: NoiseState> NoiseTranscoder<S> {
     /// Encrypt data to be sent to peer
     pub fn encrypt_buf(&mut self, buffer: &[u8]) -> Result<Vec<u8>, EncryptionError> {
         self.expect_encryptor().encrypt_buf(buffer)

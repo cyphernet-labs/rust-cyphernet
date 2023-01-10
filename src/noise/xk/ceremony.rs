@@ -27,7 +27,9 @@ mod _secp256k1 {
     pub const PUBKEY_LEN: usize = 33;
 }
 
+use crate::noise::Handshake;
 pub use _curve25519::*;
+
 pub const ACT_ONE_LENGTH: usize = 17 + PUBKEY_LEN;
 pub const ACT_TWO_LENGTH: usize = 17 + PUBKEY_LEN;
 pub const ACT_THREE_LENGTH: usize = 33 + PUBKEY_LEN;
@@ -46,12 +48,7 @@ pub enum Act {
     Three(ActThree),
 }
 
-impl Act {
-    /// Returns the size of the underlying array
-    fn len(&self) -> usize {
-        self.as_ref().len()
-    }
-}
+impl Handshake for Act {}
 
 impl From<ActBuilder> for Act {
     /// Convert a finished ActBuilder into an Act
@@ -133,7 +130,7 @@ impl ActBuilder {
 
     /// Returns true if the Act is finished building (enough bytes via fill())
     pub fn is_finished(&self) -> bool {
-        self.write_pos == self.partial_act.len()
+        self.write_pos == self.partial_act.output_len()
     }
 }
 
@@ -148,7 +145,7 @@ mod tests {
 
         let input = [1, 2, 3];
         let bytes_read = builder.fill(&input);
-        assert_eq!(builder.partial_act.len(), ACT_ONE_LENGTH);
+        assert_eq!(builder.partial_act.output_len(), ACT_ONE_LENGTH);
         assert_eq!(builder.write_pos, 3);
         assert!(!builder.is_finished());
         assert_eq!(bytes_read, input.len());
@@ -161,7 +158,7 @@ mod tests {
 
         let input = [0; ACT_ONE_LENGTH];
         let bytes_read = builder.fill(&input);
-        assert_eq!(builder.partial_act.len(), ACT_ONE_LENGTH);
+        assert_eq!(builder.partial_act.output_len(), ACT_ONE_LENGTH);
         assert_eq!(builder.write_pos, ACT_ONE_LENGTH);
         assert!(builder.is_finished());
         assert_eq!(Act::from(builder).as_ref(), &input[..]);
@@ -176,7 +173,7 @@ mod tests {
         let input = [0; ACT_ONE_LENGTH + 1];
         let bytes_read = builder.fill(&input);
 
-        assert_eq!(builder.partial_act.len(), ACT_ONE_LENGTH);
+        assert_eq!(builder.partial_act.output_len(), ACT_ONE_LENGTH);
         assert_eq!(builder.write_pos, ACT_ONE_LENGTH);
         assert!(builder.is_finished());
         assert_eq!(Act::from(builder).as_ref(), &input[..ACT_ONE_LENGTH]);

@@ -20,7 +20,7 @@ use super::ceremony::{
 };
 use crate::noise::framing::{IncompleteHandshake, NoiseDecryptor, NoiseEncryptor, NoiseState};
 use crate::noise::xk::ceremony::PUBKEY_LEN;
-use crate::noise::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
+use crate::noise::{chacha, hkdf::sha2_256 as hkdf, HandshakeError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
 // passing bytes around
@@ -35,34 +35,6 @@ macro_rules! sha256 {
 		)+
 		*(sha.finalize().as_ref() as &[u8; 32])
 	}}
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Display, Error, From)]
-#[display(doc_comments)]
-pub enum HandshakeError {
-    /// unexpected version of noise protocol: {0}.
-    UnexpectedVersion(u8),
-
-    /// invalid remote ephemeral pubkey provided during noise handshake.
-    InvalidEphemeralPubkey,
-
-    /// the initiator has provided an invalid pubkey
-    InvalidInitiatorPubkey,
-
-    /// invalid length of handshake act {act}: expected {expected}, provided {found}
-    InvalidActLen {
-        act: u8,
-        expected: usize,
-        found: usize,
-    },
-
-    #[from]
-    #[from(chacha20poly1305::aead::Error)]
-    #[display(inner)]
-    Encryption(EncryptionError),
-
-    /// noise handshake is complete, nothing to process.
-    Complete,
 }
 
 #[derive(Debug)]
@@ -88,6 +60,8 @@ impl NoiseXkState {
     }
 }
 impl NoiseState for NoiseXkState {
+    type Act = Act;
+
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {
         assert_eq!(
             encryptor.remote_pubkey, decryptor.remote_pubkey,
@@ -138,6 +112,19 @@ impl NoiseState for NoiseXkState {
             } => Ok((encryptor, decryptor)),
         }
     }
+
+    fn advance_handshake(
+        self,
+        input: &[u8],
+    ) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
+        match self {
+            NoiseXkState::InitiatorStarting(state) => state.next(),
+            NoiseXkState::ResponderAwaitingActOne(state) => state.next(input),
+            NoiseXkState::InitiatorAwaitingActTwo(state) => state.next(input),
+            NoiseXkState::ResponderAwaitingActThree(state) => state.next(input),
+            NoiseXkState::Complete { .. } => Err(HandshakeError::Complete),
+        }
+    }
 }
 
 // Enum dispatch for state machine. Single public interface can statically
@@ -163,16 +150,6 @@ impl NoiseXkState {
             responder_static_private_key,
             responder_ephemeral_private_key,
         ))
-    }
-
-    pub fn next(self, input: &[u8]) -> Result<(Option<Act>, NoiseXkState), HandshakeError> {
-        match self {
-            NoiseXkState::InitiatorStarting(state) => state.next(),
-            NoiseXkState::ResponderAwaitingActOne(state) => state.next(input),
-            NoiseXkState::InitiatorAwaitingActTwo(state) => state.next(input),
-            NoiseXkState::ResponderAwaitingActThree(state) => state.next(input),
-            NoiseXkState::Complete { .. } => Err(HandshakeError::Complete),
-        }
     }
 
     pub fn data_len(&self) -> usize {
@@ -275,7 +252,7 @@ impl InitiatorStartingState {
         // serialize act one
         let mut act_one = EMPTY_ACT_ONE;
         let (hash, chaining_key, _) = calculate_act_message(
-            initiator_ephemeral_private_key.clone(),
+            &initiator_ephemeral_private_key,
             initiator_ephemeral_public_key,
             responder_static_public_key,
             chaining_key,
@@ -361,11 +338,11 @@ impl ResponderAwaitingActOneState {
         let act_one = Act::from(act_one_builder);
 
         let (initiator_ephemeral_public_key, hash, chaining_key, _) =
-            process_act_message(&act_one, responder_static_private_key, chaining_key, hash)?;
+            process_act_message(&act_one, &responder_static_private_key, chaining_key, hash)?;
 
         let mut act_two = EMPTY_ACT_TWO;
         let (hash, chaining_key, temporary_key) = calculate_act_message(
-            responder_ephemeral_private_key.clone(),
+            &responder_ephemeral_private_key,
             responder_ephemeral_public_key,
             initiator_ephemeral_public_key,
             chaining_key,
@@ -422,7 +399,7 @@ impl InitiatorAwaitingActTwoState {
 
         let initiator_static_private_key = self.initiator_static_private_key;
         let initiator_static_public_key = self.initiator_static_public_key;
-        let initiator_ephemeral_private_key = self.initiator_ephemeral_private_key;
+        let initiator_ephemeral_private_key = &self.initiator_ephemeral_private_key;
         let responder_static_public_key = self.responder_static_public_key;
         let hash = self.hash;
         let chaining_key = self.chaining_key;
@@ -452,7 +429,10 @@ impl InitiatorAwaitingActTwoState {
         let hash = sha256!(hash, &act_three[1..(17 + PUBKEY_LEN)]);
 
         // 3. se = ECDH(s.priv, re)
-        let ecdh = ecdh(initiator_static_private_key, responder_ephemeral_public_key);
+        let ecdh = ecdh(
+            &initiator_static_private_key,
+            responder_ephemeral_public_key,
+        );
 
         // 4. ck, temp_k3 = HKDF(ck, se)
         let (chaining_key, temporary_key) = hkdf::derive(&chaining_key, &ecdh);
@@ -522,7 +502,7 @@ impl ResponderAwaitingActThreeState {
 
         let hash = self.hash;
         let temporary_key = self.temporary_key;
-        let responder_ephemeral_private_key = self.responder_ephemeral_private_key;
+        let responder_ephemeral_private_key = &self.responder_ephemeral_private_key;
         let chaining_key = self.chaining_key;
 
         // 1. Read exactly 66 bytes from the network buffer
@@ -619,7 +599,7 @@ fn initialize_handshake_state(responder_static_public_key: &PublicKey) -> ([u8; 
 // Due to the very high similarity of acts 1 and 2, this method is used to
 // process both
 fn calculate_act_message(
-    local_private_ephemeral_key: SecretKey,
+    local_private_ephemeral_key: &SecretKey,
     local_public_ephemeral_key: PublicKey,
     remote_public_key: PublicKey,
     chaining_key: ChainingKey,
@@ -663,7 +643,7 @@ fn calculate_act_message(
 // process both
 fn process_act_message(
     act_bytes: &[u8],
-    local_private_key: SecretKey,
+    local_private_key: &SecretKey,
     chaining_key: ChainingKey,
     hash: [u8; 32],
 ) -> Result<(PublicKey, [u8; 32], SymmetricKey, SymmetricKey), HandshakeError> {
@@ -714,8 +694,8 @@ fn process_act_message(
 }
 
 // TODO: Replace with ECDH from crypto
-fn ecdh(private_key: SecretKey, public_key: PublicKey) -> SymmetricKey {
-    let pk_object = public_key.dh(&private_key).expect("invalid multiplication");
+fn ecdh(private_key: &SecretKey, public_key: PublicKey) -> SymmetricKey {
+    let pk_object = public_key.dh(private_key).expect("invalid multiplication");
 
     sha256!(pk_object.as_slice())
 }
@@ -790,7 +770,7 @@ mod test {
 
     macro_rules! do_next_or_panic {
         ($state:expr, $input:expr) => {
-            if let (Some(output_act), next_state) = $state.next($input).unwrap() {
+            if let (Some(output_act), next_state) = $state.advance_handshake($input).unwrap() {
                 (output_act, next_state)
             } else {
                 panic!();
@@ -825,8 +805,10 @@ mod test {
     #[test]
     fn awaiting_act_one_to_awaiting_act_three() {
         let test_ctx = TestCtx::new();
-        let (act2, awaiting_act_three_state) =
-            test_ctx.responder.next(&test_ctx.valid_act1).unwrap();
+        let (act2, awaiting_act_three_state) = test_ctx
+            .responder
+            .advance_handshake(&test_ctx.valid_act1)
+            .unwrap();
 
         assert_eq!(act2.unwrap().as_ref(), test_ctx.valid_act2.as_slice());
         assert_matches!(awaiting_act_three_state, ResponderAwaitingActThree(_));
@@ -842,7 +824,7 @@ mod test {
         act1.extend_from_slice(&[1]);
 
         assert_eq!(
-            test_ctx.responder.next(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
             HandshakeError::InvalidActLen {
                 act: 1,
                 expected: 50,
@@ -861,10 +843,10 @@ mod test {
         let act1_partial1 = &test_ctx.valid_act1[..25];
         let act1_partial2 = &test_ctx.valid_act1[25..];
 
-        let next_state = test_ctx.responder.next(act1_partial1).unwrap();
+        let next_state = test_ctx.responder.advance_handshake(act1_partial1).unwrap();
         assert_matches!(next_state, (None, ResponderAwaitingActOne(_)));
         assert_matches!(
-            next_state.1.next(act1_partial2).unwrap(),
+            next_state.1.advance_handshake(act1_partial2).unwrap(),
             (Some(_), ResponderAwaitingActThree(_))
         );
     }
@@ -877,7 +859,7 @@ mod test {
         let act1 = Vec::<u8>::from_hex("01036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.next(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
             HandshakeError::UnexpectedVersion(1)
         );
     }
@@ -891,7 +873,7 @@ mod test {
         let act1 = Vec::<u8>::from_hex("00046360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.next(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
             HandshakeError::InvalidEphemeralPubkey
         );
     }
@@ -904,7 +886,7 @@ mod test {
         let act1 = Vec::<u8>::from_hex("00036360e856310ce5d294e8be33fc807077dc56ac80d95d9cd4ddbd21325eff73f70df6086551151f58b8afe6c195782c").unwrap();
 
         assert_eq!(
-            test_ctx.responder.next(&act1).err().unwrap(),
+            test_ctx.responder.advance_handshake(&act1).err().unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -920,7 +902,10 @@ mod test {
         act2.extend_from_slice(&[1]);
 
         assert_eq!(
-            awaiting_act_two_state.next(&act2).err().unwrap(),
+            awaiting_act_two_state
+                .advance_handshake(&act2)
+                .err()
+                .unwrap(),
             HandshakeError::InvalidActLen {
                 act: 2,
                 expected: 50,
@@ -968,10 +953,12 @@ mod test {
         let act2_partial1 = &test_ctx.valid_act2[..25];
         let act2_partial2 = &test_ctx.valid_act2[25..];
 
-        let next_state = awaiting_act_two_state.next(act2_partial1).unwrap();
+        let next_state = awaiting_act_two_state
+            .advance_handshake(act2_partial1)
+            .unwrap();
         assert_matches!(next_state, (None, InitiatorAwaitingActTwo(_)));
         assert_matches!(
-            next_state.1.next(act2_partial2).unwrap(),
+            next_state.1.advance_handshake(act2_partial2).unwrap(),
             (Some(_), Complete { .. })
         );
     }
@@ -985,7 +972,10 @@ mod test {
         let act2 = Vec::<u8>::from_hex("0102466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
         assert_eq!(
-            awaiting_act_two_state.next(&act2).err().unwrap(),
+            awaiting_act_two_state
+                .advance_handshake(&act2)
+                .err()
+                .unwrap(),
             HandshakeError::UnexpectedVersion(1)
         );
     }
@@ -1000,7 +990,10 @@ mod test {
         let act2 = Vec::<u8>::from_hex("0004466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
         assert_eq!(
-            awaiting_act_two_state.next(&act2).err().unwrap(),
+            awaiting_act_two_state
+                .advance_handshake(&act2)
+                .err()
+                .unwrap(),
             HandshakeError::InvalidEphemeralPubkey
         );
     }
@@ -1014,7 +1007,10 @@ mod test {
         let act2 = Vec::<u8>::from_hex("0002466d7fcae563e5cb09a0d1870bb580344804617879a14949cf22285f1bae3f276e2470b93aac583c9ef6eafca3f730").unwrap();
 
         assert_eq!(
-            awaiting_act_two_state.next(&act2).err().unwrap(),
+            awaiting_act_two_state
+                .advance_handshake(&act2)
+                .err()
+                .unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -1029,7 +1025,7 @@ mod test {
             do_next_or_panic!(test_ctx.responder, &test_ctx.valid_act1);
 
         let (None, Complete { encryptor, decryptor }) =
-            awaiting_act_three_state.next(&test_ctx.valid_act3).unwrap()
+            awaiting_act_three_state.advance_handshake(&test_ctx.valid_act3).unwrap()
         else {
             panic!();
         };
@@ -1051,7 +1047,7 @@ mod test {
         act3.extend_from_slice(&[2; 100]);
 
         let (None, Complete { encryptor, decryptor }) =
-            awaiting_act_three_state.next(&act3).unwrap()
+            awaiting_act_three_state.advance_handshake(&act3).unwrap()
         else {
             panic!();
         };
@@ -1070,7 +1066,10 @@ mod test {
         let act3 = Vec::<u8>::from_hex("01b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state.next(&act3).err().unwrap(),
+            awaiting_act_three_state
+                .advance_handshake(&act3)
+                .err()
+                .unwrap(),
             HandshakeError::UnexpectedVersion(1)
         );
     }
@@ -1089,10 +1088,12 @@ mod test {
         let act3_partial1 = &test_ctx.valid_act3[..35];
         let act3_partial2 = &test_ctx.valid_act3[35..];
 
-        let next_state = awaiting_act_three_state.next(act3_partial1).unwrap();
+        let next_state = awaiting_act_three_state
+            .advance_handshake(act3_partial1)
+            .unwrap();
         assert_matches!(next_state, (None, ResponderAwaitingActThree(_)));
         assert_matches!(
-            next_state.1.next(act3_partial2),
+            next_state.1.advance_handshake(act3_partial2),
             Ok((None, Complete { .. }))
         );
     }
@@ -1107,7 +1108,10 @@ mod test {
         let act3 = Vec::<u8>::from_hex("00c9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139ba").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state.next(&act3).err().unwrap(),
+            awaiting_act_three_state
+                .advance_handshake(&act3)
+                .err()
+                .unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -1123,7 +1127,10 @@ mod test {
         let act3 = Vec::<u8>::from_hex("00bfe3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa2235536ad09a8ee351870c2bb7f78b754a26c6cef79a98d25139c856d7efd252c2ae73c").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state.next(&act3).err().unwrap(),
+            awaiting_act_three_state
+                .advance_handshake(&act3)
+                .err()
+                .unwrap(),
             HandshakeError::InvalidInitiatorPubkey
         );
     }
@@ -1138,7 +1145,10 @@ mod test {
         let act3 = Vec::<u8>::from_hex("00b9e3a702e93e3a9948c2ed6e5fd7590a6e1c3a0344cfc9d5b57357049aa22355361aa02e55a8fc28fef5bd6d71ad0c38228dc68b1c466263b47fdf31e560e139bb").unwrap();
 
         assert_eq!(
-            awaiting_act_three_state.next(&act3).err().unwrap(),
+            awaiting_act_three_state
+                .advance_handshake(&act3)
+                .err()
+                .unwrap(),
             HandshakeError::Encryption(chacha20poly1305::aead::Error.into())
         );
     }
@@ -1153,7 +1163,7 @@ mod test {
         let (act2, _awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
         let (_act3, complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
 
-        complete_state.next(&[]).unwrap();
+        complete_state.advance_handshake(&[]).unwrap();
     }
 
     // Initiator::Complete -> Error
@@ -1166,14 +1176,15 @@ mod test {
         let (act2, awaiting_act_three_state) = do_next_or_panic!(test_ctx.responder, &act1);
         let (act3, _complete_state) = do_next_or_panic!(awaiting_act_two_state, &act2);
 
-        let complete_state =
-            if let (None, complete_state) = awaiting_act_three_state.next(&act3).unwrap() {
-                complete_state
-            } else {
-                panic!();
-            };
+        let complete_state = if let (None, complete_state) =
+            awaiting_act_three_state.advance_handshake(&act3).unwrap()
+        {
+            complete_state
+        } else {
+            panic!();
+        };
 
-        complete_state.next(&[]).unwrap();
+        complete_state.advance_handshake(&[]).unwrap();
     }
 
     // Test the Act byte generation against known good hard-coded values in case
