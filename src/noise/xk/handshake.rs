@@ -127,6 +127,16 @@ impl NoiseState for NoiseXkState {
         *self = clone;
         Ok(act)
     }
+
+    fn next_handshake_len(&self) -> usize {
+        match self {
+            NoiseXkState::InitiatorStarting(_) => 50,
+            NoiseXkState::ResponderAwaitingActOne(_) => 50,
+            NoiseXkState::InitiatorAwaitingActTwo(_) => 50,
+            NoiseXkState::ResponderAwaitingActThree(_) => 66,
+            NoiseXkState::Complete { .. } => 66,
+        }
+    }
 }
 
 // Enum dispatch for state machine. Single public interface can statically
@@ -152,16 +162,6 @@ impl NoiseXkState {
             responder_static_private_key,
             responder_ephemeral_private_key,
         ))
-    }
-
-    pub fn data_len(&self) -> usize {
-        match self {
-            NoiseXkState::InitiatorStarting(_) => 50,
-            NoiseXkState::ResponderAwaitingActOne(_) => 50,
-            NoiseXkState::InitiatorAwaitingActTwo(_) => 50,
-            NoiseXkState::ResponderAwaitingActThree(_) => 66,
-            NoiseXkState::Complete { .. } => 66,
-        }
     }
 }
 
