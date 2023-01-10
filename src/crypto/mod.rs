@@ -1,11 +1,11 @@
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-pub trait EcPk: Clone {
+pub trait EcPk: Clone + Eq {
     fn generator() -> Self;
 }
 
-pub trait EcSk {
+pub trait EcSk: Eq {
     type Pk: EcPk;
     fn to_pk(&self) -> Self::Pk;
 }
