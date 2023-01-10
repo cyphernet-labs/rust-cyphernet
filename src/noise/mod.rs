@@ -1,4 +1,5 @@
 mod chacha;
+mod framing;
 mod hkdf;
 mod xk;
 

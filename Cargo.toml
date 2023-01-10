@@ -25,9 +25,10 @@ quickcheck = { version = "1", default-features = false }
 
 [features]
 default = []
-all = ["serde", "tor", "i2p", "nym", "dns", "pem", "ed25519", "secp256k1", "rand"]
+all = ["serde", "tor", "i2p", "nym", "dns", "pem", "ed25519", "secp256k1", "rand", "keygen"]
 tor = ["sha3", "ed25519", "base32"]
 i2p = ["ed25519"]
 nym = []
 dns = []
 pem = ["ed25519/pem"]
+keygen = ["rand", "secp256k1/rand", "ed25519/random"]
