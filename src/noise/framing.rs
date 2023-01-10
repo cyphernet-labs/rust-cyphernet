@@ -221,6 +221,7 @@ pub trait NoiseState: Sized {
 
     fn advance_handshake(&mut self, input: &[u8]) -> Result<Option<Self::Act>, HandshakeError>;
     fn next_handshake_len(&self) -> usize;
+    fn is_handshake_complete(&self) -> bool;
 
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self;
     fn try_as_split(&self) -> Result<(&NoiseEncryptor, &NoiseDecryptor), IncompleteHandshake>;
@@ -261,6 +262,10 @@ impl<S: NoiseState> NoiseState for NoiseTranscoder<S> {
 
     fn next_handshake_len(&self) -> usize {
         self.state.next_handshake_len()
+    }
+
+    fn is_handshake_complete(&self) -> bool {
+        self.state.is_handshake_complete()
     }
 
     fn with_split(encryptor: NoiseEncryptor, decryptor: NoiseDecryptor) -> Self {

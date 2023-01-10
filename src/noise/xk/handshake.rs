@@ -137,6 +137,10 @@ impl NoiseState for NoiseXkState {
             NoiseXkState::Complete { .. } => 66,
         }
     }
+
+    fn is_handshake_complete(&self) -> bool {
+        matches!(self, NoiseXkState::Complete { .. })
+    }
 }
 
 // Enum dispatch for state machine. Single public interface can statically
