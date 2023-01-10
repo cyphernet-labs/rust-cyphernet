@@ -46,7 +46,7 @@ impl Ecdh for PrivateKey {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -175,7 +175,7 @@ impl TryFrom<String> for PublicKey {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, From)]
+#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct PrivateKey(#[from] ::ed25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
