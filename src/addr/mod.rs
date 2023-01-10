@@ -36,19 +36,19 @@ pub trait Localhost: Host {
 
 impl Localhost for std::net::IpAddr {
     fn localhost() -> Self {
-        std::net::IpAddr::localhost()
+        std::net::Ipv4Addr::LOCALHOST.into()
     }
 }
 
 impl Localhost for std::net::Ipv4Addr {
     fn localhost() -> Self {
-        std::net::Ipv4Addr::localhost()
+        std::net::Ipv4Addr::LOCALHOST
     }
 }
 
 impl Localhost for std::net::Ipv6Addr {
     fn localhost() -> Self {
-        std::net::Ipv6Addr::localhost()
+        std::net::Ipv6Addr::LOCALHOST
     }
 }
 
