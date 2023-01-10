@@ -19,9 +19,18 @@
 
 use std::{cmp, ops};
 
-pub const ACT_ONE_LENGTH: usize = 50;
-pub const ACT_TWO_LENGTH: usize = 50;
-pub const ACT_THREE_LENGTH: usize = 66;
+mod _curve25519 {
+    pub const PUBKEY_LEN: usize = 32;
+}
+
+mod _secp256k1 {
+    pub const PUBKEY_LEN: usize = 33;
+}
+
+pub use _curve25519::*;
+pub const ACT_ONE_LENGTH: usize = 17 + PUBKEY_LEN;
+pub const ACT_TWO_LENGTH: usize = 17 + PUBKEY_LEN;
+pub const ACT_THREE_LENGTH: usize = 33 + PUBKEY_LEN;
 pub const EMPTY_ACT_ONE: ActOne = [0; ACT_ONE_LENGTH];
 pub const EMPTY_ACT_TWO: ActTwo = [0; ACT_TWO_LENGTH];
 pub const EMPTY_ACT_THREE: ActThree = [0; ACT_THREE_LENGTH];
