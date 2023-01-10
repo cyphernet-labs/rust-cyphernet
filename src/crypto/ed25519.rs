@@ -213,14 +213,6 @@ impl PrivateKey {
     pub fn to_pem(&self) -> String {
         self.0.to_pem()
     }
-
-    #[cfg(feature = "rand")]
-    pub fn test() -> Self {
-        use rand::RngCore;
-        let mut key = [0u8; 64];
-        rand::thread_rng().fill_bytes(&mut key);
-        ::ed25519::SecretKey::new(key).into()
-    }
 }
 
 /// Cryptographic signature.

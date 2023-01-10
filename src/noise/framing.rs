@@ -180,18 +180,6 @@ impl NoiseDecryptor {
             &None => 0,
         }
     }
-
-    #[inline]
-    pub(crate) fn pending_message_len(&self) -> Option<usize> {
-        self.pending_message_length
-    }
-
-    #[inline]
-    pub(crate) fn read_buffer(&self) -> Option<&[u8]> {
-        self.read_buffer
-            .as_ref()
-            .and_then(|buf| self.pending_message_length.map(|len| &buf[..len]))
-    }
 }
 
 impl Iterator for NoiseDecryptor {

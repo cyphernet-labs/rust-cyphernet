@@ -49,16 +49,6 @@ pub enum NoiseXkState {
     },
 }
 
-impl NoiseXkState {
-    fn expect_as_complete(&self) -> (&NoiseEncryptor, &NoiseDecryptor) {
-        self.try_as_split()
-            .expect("Noise_XK handshake is not complete")
-    }
-    fn expect_as_complete_mut(&mut self) -> (&mut NoiseEncryptor, &mut NoiseDecryptor) {
-        self.try_as_split_mut()
-            .expect("Noise_XK handshake is not complete")
-    }
-}
 impl NoiseState for NoiseXkState {
     type Act = Act;
 
@@ -1146,7 +1136,7 @@ mod test {
         let mut test_ctx = TestCtx::new();
         let act1 = test_ctx.initiator.advance_handshake(&[]).unwrap().unwrap();
         let act2 = unwrap!(test_ctx.responder.advance_handshake(&act1));
-        let act3 = unwrap!(test_ctx.initiator.advance_handshake(&act2));
+        unwrap!(test_ctx.initiator.advance_handshake(&act2));
 
         test_ctx.initiator.advance_handshake(&[]).unwrap();
     }
