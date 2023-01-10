@@ -15,27 +15,20 @@
 #[macro_use]
 extern crate amplify;
 
-mod ceremony;
 mod chacha;
 mod hkdf;
-mod handshake;
+mod xk;
 
 pub type SymmetricKey = [u8; 32];
 
-#[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-    From
-)]
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum EncryptionError {
     /// message length {0} exceeds maximum size allowed for the encryption
     /// protocol frame.
     ExceedingMaxLength(usize),
 
-    /// chacha20poly1305 AEAD encrypter error.
-    #[from(chacha20poly1305::aead::Error)]
-    ChaCha,
-
-    /// message provided for a Noise protocol has incorrect length
-    ExpectedMessageLenMismatch,
+    /// ChaCha20Poly1305 AEAD encryptor error.
+    #[from]
+    ChaCha(chacha20poly1305::aead::Error),
 }

@@ -18,7 +18,7 @@ use super::ceremony::{
     Act, ActBuilder, ACT_ONE_LENGTH, ACT_THREE_LENGTH, ACT_TWO_LENGTH, EMPTY_ACT_ONE,
     EMPTY_ACT_THREE, EMPTY_ACT_TWO,
 };
-use crate::{chacha, hkdf, EncryptionError, SymmetricKey};
+use crate::{chacha, hkdf::sha2_256 as hkdf, EncryptionError, SymmetricKey};
 
 // Alias type to help differentiate between temporary key and chaining key when
 // passing bytes around
@@ -35,7 +35,7 @@ macro_rules! concat_then_sha256 {
 	}}
 }
 
-#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Display, Error, From)]
+#[derive(Debug, Clone, PartialEq, Eq, Display, Error, From)]
 #[display(inner)]
 pub enum HandshakeError {
     #[from]
