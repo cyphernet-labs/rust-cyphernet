@@ -22,8 +22,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
-use super::AddrParseError;
-use crate::addr::{Host, Localhost};
+use super::{AddrParseError, Host};
 
 /// An Internet host name which can be resolved by standard OS means (and thus
 /// accepted by `std::net` methods via use of [`std::net::ToSocketAddrs`] trait,
@@ -47,8 +46,8 @@ pub enum InetHost {
 impl Host for InetHost {}
 
 #[cfg(feature = "dns")]
-impl Localhost for InetHost {
-    fn localhost() -> Self { Self::Ip(Localhost::localhost()) }
+impl super::Localhost for InetHost {
+    fn localhost() -> Self { Self::Ip(super::Localhost::localhost()) }
 }
 
 #[cfg(feature = "dns")]

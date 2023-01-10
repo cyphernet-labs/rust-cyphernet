@@ -21,8 +21,9 @@
 
 use std::net::{IpAddr, ToSocketAddrs};
 
-use super::Addr;
-use crate::addr::{Host, HostName, InetHost, NetAddr};
+#[cfg(feature = "dns")]
+use super::InetHost;
+use super::{Addr, Host, HostName, NetAddr};
 
 /// A hack to apply feature gates to the generic defaults
 #[cfg(feature = "dns")]
@@ -44,8 +45,8 @@ pub enum ProxiedHost<P: ToSocketAddrs + Addr = DefaultAddr> {
 
     #[cfg(not(feature = "dns"))]
     #[from(IpAddr)]
-    #[from(Ipv4Addr)]
-    #[from(Ipv6Addr)]
+    #[from(std::net::Ipv4Addr)]
+    #[from(std::net::Ipv6Addr)]
     Native(IpAddr),
 
     Ip(IpAddr, P),
@@ -106,7 +107,7 @@ pub struct ProxiedAddr<A: Addr = NetAddr<HostName>> {
     #[cfg(feature = "dns")]
     pub proxy_addr: NetAddr<InetHost>,
     #[cfg(not(feature = "dns"))]
-    pub proxy_addr: SocketAddr,
+    pub proxy_addr: std::net::SocketAddr,
     pub remote_addr: A,
 }
 

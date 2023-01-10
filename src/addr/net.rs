@@ -24,7 +24,9 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV
 use std::str::FromStr;
 use std::{fmt, io, vec};
 
-use crate::addr::{Addr, AddrParseError, Host, InetHost, Localhost, ToSocketAddr};
+#[cfg(feature = "dns")]
+use super::InetHost;
+use super::{Addr, AddrParseError, Host, Localhost, ToSocketAddr};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
