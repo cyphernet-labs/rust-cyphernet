@@ -235,20 +235,23 @@ impl TryFrom<&[u8]> for Signature {
     }
 }
 
-/*
-impl EcSig for Signature {
-    type Sk = PrivateKey;
-    type Pk = PublicKey;
+pub trait Sign: EcSk {
+    type Sig: Sized;
 
-    fn sign(self, sk: &PrivateKey, msg: impl AsRef<[u8]>) -> Self {
-        sk.0.sign(msg, None).into()
-    }
+    fn sign(&self, msg: impl AsRef<[u8]>) -> Self::Sig;
+}
 
+impl Sign for PrivateKey {
+    type Sig = Signature;
+
+    fn sign(&self, msg: impl AsRef<[u8]>) -> Signature { self.0.sign(msg, None).into() }
+
+    /*
     fn verify(self, pk: &PublicKey, msg: impl AsRef<[u8]>) -> bool {
         pk.0.verify(msg, &self.0).is_ok()
     }
+     */
 }
-*/
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]
