@@ -38,6 +38,19 @@ pub trait Ecdh: EcSk {
     fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err>;
 }
 
+pub trait Digest {
+    const OUTPUT_LEN: usize;
+    type Key;
+    type Midstate: Copy + Sized + Send;
+    type Output: Copy + Sized + Send;
+
+    fn with_key(key: Self::Key) -> Self;
+    fn from_midstate(midstate: Self::Midstate) -> Self;
+    fn to_midstate(&self) -> Self::Midstate;
+    fn input(&mut self);
+    fn output(&self) -> Self::Output;
+}
+
 /*
 pub trait EcSig {
     type Sk: EcSk<Pk = Self::Pk>;

@@ -20,9 +20,12 @@
 // limitations under the License.
 
 mod chacha;
-pub mod framing;
+mod framing;
 mod hkdf;
 pub mod xk;
+pub mod nn;
+
+pub use framing::{NoiseDecryptor, NoiseEncryptor, NoiseState, NoiseTranscoder};
 
 pub type SymmetricKey = [u8; 32];
 
@@ -69,4 +72,18 @@ pub enum HandshakeError {
 pub trait Handshake: AsRef<[u8]> {
     /// Returns the size of output data for the handshake act
     fn output_len(&self) -> usize { self.as_ref().len() }
+}
+
+pub enum StaticKeyPat {
+    No,
+    Xmits,
+    Known,
+}
+
+pub trait NoiseProtocol: NoiseState {
+    type Ecdh: crate::crypto::Ecdh;
+    type Digest: crate::crypto::Digest;
+
+    const INITIATOR: StaticKeyPat;
+    const RESPONDER: StaticKeyPat;
 }
