@@ -114,6 +114,12 @@ impl<Id: EcPk, H: Host, const DEFAULT_PORT: u16> From<PeerAddr<Id, PartialAddr<H
     }
 }
 
+impl<Id: EcPk, A: Addr, To: Host> From<PeerAddr<Id, A>> for NetAddr<To>
+where NetAddr<To>: From<A>
+{
+    fn from(peer: PeerAddr<Id, A>) -> Self { peer.addr.into() }
+}
+
 impl<Id: EcPk, A: Addr + Into<net::SocketAddr>> From<PeerAddr<Id, A>> for net::SocketAddr {
     fn from(peer: PeerAddr<Id, A>) -> Self { peer.addr.into() }
 }
