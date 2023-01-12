@@ -1,4 +1,4 @@
-# Cyphernet Rust Library
+# Cyphernet: privacy-preserving networking & internet applications
 
 ![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
 ![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
@@ -9,13 +9,12 @@
 [![Docs](https://docs.rs/cyphernet/badge.svg)](https://docs.rs/cyphernet)
 [![Apache-2 licensed](https://img.shields.io/crates/l/cyphernet)](./LICENSE)
 
-Cyphernet is a set of libraries for privacy-preserving networking & internet
-applications.
+This repository provides a set of libraries for privacy-preserving networking & 
+internet applications written in rust.
 
 The set of libraries supports mix networks (Tor, I2P, Nym), proxies, end-to-end
 encryption without central authorities/PKI (Noise-based encryption protocols 
 like lightning wire protocol, NTLS etc).
-
 
     Language: Rust
     Minimal compiler version: 1.65
@@ -61,6 +60,14 @@ Network addresses provided by the library include the following types:
 
 API reference documentation for the library can be accessed at
 <https://docs.rs/cyphernet/>.
+
+
+## About cyphernet
+
+Cyphernet is a conceptual approach for a privacy-preserving networking, based on
+the following stack of layers:
+
+![Cyphernet stack](https://github.com/Cyphernet-WG/rust-cyphernet/tree/master/assets/cyphernet-stacl.svg)
 
 
 ## Licensing
