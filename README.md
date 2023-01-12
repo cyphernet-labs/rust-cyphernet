@@ -16,32 +16,50 @@ The set of libraries supports mix networks (Tor, I2P, Nym), proxies, end-to-end
 encryption without central authorities/PKI (Noise-based encryption protocols 
 like lightning wire protocol, NTLS etc).
 
-    Language: Rust
-    Minimal compiler version: 1.65
-    Author: Maxim Orlovsky
-    Maintained: Cyphernet Association, Switzerland
-    Maintainers: Maxim Orlovsky (@dr-orlovsky)
-                 Alexis Sellier (@cloudhead)
-    Type: Free software
-    License: Apache-2.0
- 
+## Manifest
+
+```yaml
+Name: cyphernet
+Type: Library
+Kind: Free software
+License: Apache-2.0
+Language: Rust
+Compiler: 1.65
+Author: Maxim Orlovsky
+Maintained: Cyphernet Initiative, Switzerland
+Maintainers:
+  Maxim Orlovsky:
+    GitHub: @dr-orlovsky
+    GPG: EAE730CEC0C663763F028A5860094BAF18A26EC9
+    SSH: BoSGFzbyOKC7Jm28MJElFboGepihCpHop60nS8OoG/A
+    EMail: dr@orlovsky.ch
+  Alexis Sellier:
+    GitHub: @cloudhead
+    SSH: iTDjRHSIaoL8dpHbQ0mv+y0IQqPufGl2hQwk4TbXFlw
+```
+
 ## Overview
 
 The library provides three main components, structured as modules:
-- **Network addresses** (module `addr`), which allow simple use of
+- **Network addresses** (sub-crate `cypheraddr`), which allow simple use of
     - Tor, Nym, I2P and other mix networks and SOCKS proxies
     - P2P addresses with node public keys
     - May be used in a way that prevents using DNS names (outside mixnet scope).
-- **Noise protocol framework** (module `noise`) for end-to-end encrypted
-  network communications.
+- **Noise protocol framework** (sub-crate `noise-framework`) for end-to-end
+  encrypted network communications.
+- **SOCKS5 client** (sub-crate `socks5-client`) for accessing Tor and other
+  mixnets via proxy.
+
+All the components has a minimal set of non-optional dependencies and short
+compile times. For instance, SOCKS5 proxy and cyphernet addresses both have zero 
+non-optional dependencies.
 
 The library tries to minimize number of dependencies. Most of its functionality
 is available via non-default features, like:
-- `noise`: support for noise protocols
+- `noise`: support for noise protocols;
 - `mixnets`: supports for mixnet network addresses, including `tor`, `nym`, 
-             `i2p` (may require additional crypto libraries for parsing public 
-             keys)
-- `serde`: encoding for addresses types
+  `i2p` (may require additional crypto libraries for parsing public keys);
+- `serde`: encoding for addresses types;
 - `dns`: enable use of DNS names alongside IP addresses and mixnet names.
 
 Network addresses provided by the library include the following types:
@@ -67,7 +85,7 @@ API reference documentation for the library can be accessed at
 Cyphernet is a conceptual approach for a privacy-preserving networking, based on
 the following stack of layers:
 
-![Cyphernet stack](https://github.com/Cyphernet-WG/rust-cyphernet/tree/master/assets/cyphernet-stacl.svg)
+![Cyphernet stack](https://github.com/Cyphernet-WG/rust-cyphernet/tree/master/assets/cyphernet-stack.svg)
 
 
 ## Licensing

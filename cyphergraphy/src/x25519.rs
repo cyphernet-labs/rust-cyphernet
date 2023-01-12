@@ -23,9 +23,8 @@
 
 use std::cmp::Ordering;
 use std::ops::Deref;
-use ed25519_compact::Error;
 
-use super::*;
+use crate::*;
 
 // ============================================================================
 // ed25519_compact keys
@@ -37,9 +36,7 @@ impl EcPk for ed25519_compact::x25519::PublicKey {
 
     fn base_point() -> Self { ed25519_compact::x25519::PublicKey::base_point() }
 
-    fn to_pk_compressed(&self) -> Self::Compressed {
-        *self.deref()
-    }
+    fn to_pk_compressed(&self) -> Self::Compressed { *self.deref() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
         Ok(ed25519_compact::x25519::PublicKey::new(pk))
@@ -49,7 +46,9 @@ impl EcPk for ed25519_compact::x25519::PublicKey {
 impl EcSk for ed25519_compact::x25519::SecretKey {
     type Pk = ed25519_compact::x25519::PublicKey;
 
-    fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid> { self.recover_public_key().map_err(EcSkInvalid::from) }
+    fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid> {
+        self.recover_public_key().map_err(EcSkInvalid::from)
+    }
 }
 
 // ============================================================================
@@ -84,13 +83,9 @@ impl EcPk for PublicKey {
     const CURVE_NAME: &'static str = "Curve25519";
     type Compressed = [u8; 32];
 
-    fn base_point() -> Self {
-        Self(ed25519_compact::x25519::PublicKey::base_point())
-    }
+    fn base_point() -> Self { Self(ed25519_compact::x25519::PublicKey::base_point()) }
 
-    fn to_pk_compressed(&self) -> Self::Compressed {
-        self.0.to_pk_compressed()
-    }
+    fn to_pk_compressed(&self) -> Self::Compressed { self.0.to_pk_compressed() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
         ed25519_compact::x25519::PublicKey::from_pk_compressed(pk).map(Self)
@@ -115,75 +110,13 @@ impl EcSk for PrivateKey {
     fn to_pk(&self) -> Result<PublicKey, EcSkInvalid> { self.0.to_pk().map(PublicKey::from) }
 }
 
-impl From<ed25519_compact::Error> for EcPkInvalid {
-    fn from(err: Error) -> Self {
-        match err {
-            Error::InvalidPublicKey => EcPkInvalid {},
-
-            Error::WeakPublicKey |
-            Error::InvalidSecretKey |
-            Error::SignatureMismatch |
-            Error::InvalidSignature |
-            Error::InvalidSeed |
-            Error::InvalidBlind |
-            Error::InvalidNoise |
-            Error::ParseError |
-            Error::NonCanonical => {
-                unreachable!("ECDH in ed25519-compact crate should not generate this errors")
-            }
-        }
-    }
-}
-
-impl From<ed25519_compact::Error> for EcSkInvalid {
-    fn from(err: Error) -> Self {
-        match err {
-            Error::InvalidSecretKey => EcSkInvalid {},
-
-            Error::WeakPublicKey |
-            Error::InvalidPublicKey |
-            Error::SignatureMismatch |
-            Error::InvalidSignature |
-            Error::InvalidSeed |
-            Error::InvalidBlind |
-            Error::InvalidNoise |
-            Error::ParseError |
-            Error::NonCanonical => {
-                unreachable!("ECDH in ed25519-compact crate should not generate this errors")
-            }
-        }
-    }
-}
-
-impl From<ed25519_compact::Error> for EcdhError {
-    fn from(err: Error) -> Self {
-        match err {
-            Error::WeakPublicKey => EcdhError::WeakPk,
-            Error::InvalidPublicKey => EcdhError::InvalidPk(EcPkInvalid {}),
-            Error::InvalidSecretKey => EcdhError::InvalidSk(EcSkInvalid {}),
-
-            Error::SignatureMismatch |
-            Error::InvalidSignature |
-            Error::InvalidSeed |
-            Error::InvalidBlind |
-            Error::InvalidNoise |
-            Error::ParseError |
-            Error::NonCanonical => {
-                unreachable!("ECDH in ed25519-compact crate should not generate this errors")
-            }
-        }
-    }
-}
-
 // ============================================================================
 // ECDH
 
 impl Ecdh for ed25519_compact::x25519::SecretKey {
     type SharedSecret = [u8; 32];
 
-    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::SharedSecret, EcdhError> {
-        Ok(*pk.dh(self)?)
-    }
+    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::SharedSecret, EcdhError> { Ok(*pk.dh(self)?) }
 }
 
 impl Ecdh for PrivateKey {

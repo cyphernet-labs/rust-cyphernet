@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ use std::str::FromStr;
 use std::{fmt, io, vec};
 
 #[cfg(feature = "dns")]
-use super::InetHost;
-use super::{Addr, AddrParseError, Host, Localhost, ToSocketAddr};
+use crate::InetHost;
+use crate::{Addr, AddrParseError, Host, Localhost, ToSocketAddr};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

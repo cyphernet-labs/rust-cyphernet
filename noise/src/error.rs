@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,16 +18,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-mod chacha;
-mod framing;
-mod hkdf;
-pub mod xk;
-pub mod nn;
-
-pub use framing::{NoiseDecryptor, NoiseEncryptor, NoiseState, NoiseTranscoder};
-
-pub type SymmetricKey = [u8; 32];
 
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
@@ -68,22 +58,6 @@ pub enum HandshakeError {
     /// noise handshake is complete, nothing to process.
     Complete,
 }
-
-pub trait Handshake: AsRef<[u8]> {
-    /// Returns the size of output data for the handshake act
-    fn output_len(&self) -> usize { self.as_ref().len() }
-}
-
-pub enum StaticKeyPat {
-    No,
-    Xmits,
-    Known,
-}
-
-pub trait NoiseProtocol: NoiseState {
-    type Ecdh: crate::crypto::Ecdh;
-    type Digest: crate::crypto::Digest;
-
-    const INITIATOR: StaticKeyPat;
-    const RESPONDER: StaticKeyPat;
-}
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display("incomplete Noise handshake")]
+pub struct IncompleteHandshake;

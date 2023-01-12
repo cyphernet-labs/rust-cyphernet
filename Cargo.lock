@@ -192,20 +192,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3b7eb4404b8195a9abb6356f4ac07d8ba267045c8d6d220ac4dc992e6cc75df"
 
 [[package]]
-name = "cyphernet"
+name = "cypheraddr"
 version = "0.1.0"
 dependencies = [
  "amplify",
  "base32",
+ "cyphergraphy",
+ "serde",
+ "sha3",
+]
+
+[[package]]
+name = "cyphergraphy"
+version = "0.1.0"
+dependencies = [
+ "amplify",
  "blake3",
- "chacha20poly1305",
  "ed25519-compact",
- "hmac",
  "multibase",
  "secp256k1",
- "serde",
  "sha2",
  "sha3",
+]
+
+[[package]]
+name = "cyphernet"
+version = "0.1.0"
+dependencies = [
+ "cypheraddr",
+ "cyphergraphy",
+ "noise-framework",
+ "socks5-client",
 ]
 
 [[package]]
@@ -262,7 +279,6 @@ checksum = "6a3d382e8464107391c8706b4c14b087808ecb909f6c15c34114bc42e53a9e4c"
 dependencies = [
  "ct-codecs",
  "ed25519",
- "getrandom",
 ]
 
 [[package]]
@@ -284,15 +300,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
-]
-
-[[package]]
-name = "hmac"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
-dependencies = [
- "digest",
 ]
 
 [[package]]
@@ -337,6 +344,15 @@ dependencies = [
  "base-x",
  "data-encoding",
  "data-encoding-macro",
+]
+
+[[package]]
+name = "noise-framework"
+version = "0.1.0"
+dependencies = [
+ "amplify",
+ "chacha20poly1305",
+ "cyphergraphy",
 ]
 
 [[package]]
@@ -453,6 +469,10 @@ name = "signature"
 version = "1.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
+
+[[package]]
+name = "socks5-client"
+version = "0.1.0"
 
 [[package]]
 name = "subtle"

@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
 
-use super::{AddrParseError, Host};
-use crate::addr::Localhost;
+use crate::{AddrParseError, Host, Localhost};
 
 /// An Internet host name which can be resolved by standard OS means (and thus
 /// accepted by `std::net` methods via use of [`std::net::ToSocketAddrs`] trait,

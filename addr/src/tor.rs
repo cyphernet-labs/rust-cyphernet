@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use base32::Alphabet;
+use cypher::ed25519::PublicKey;
+use cypher::{EcPk, EcPkInvalid};
 use sha3::Digest;
 
 const ALPHABET: Alphabet = Alphabet::RFC4648 { padding: false };
@@ -35,12 +37,12 @@ pub const ONION_V3_RAW_LEN: usize = 35;
     serde(into = "String", try_from = "String")
 )]
 pub struct OnionAddrV3 {
-    pk: ed25519_compact::PublicKey,
+    pk: PublicKey,
     checksum: u16,
 }
 
-impl From<ed25519_compact::PublicKey> for OnionAddrV3 {
-    fn from(pk: ed25519_compact::PublicKey) -> Self {
+impl From<PublicKey> for OnionAddrV3 {
+    fn from(pk: PublicKey) -> Self {
         let mut h = sha3::Sha3_256::default();
         h.update(b".onion checksum");
         h.update(&pk[..]);
@@ -51,12 +53,12 @@ impl From<ed25519_compact::PublicKey> for OnionAddrV3 {
     }
 }
 
-impl From<OnionAddrV3> for ed25519_compact::PublicKey {
+impl From<OnionAddrV3> for PublicKey {
     fn from(onion: OnionAddrV3) -> Self { onion.pk }
 }
 
 impl OnionAddrV3 {
-    pub fn into_public_key(self) -> ed25519_compact::PublicKey { self.pk }
+    pub fn into_public_key(self) -> PublicKey { self.pk }
 
     pub fn into_raw_bytes(self) -> [u8; ONION_V3_RAW_LEN] {
         let mut data = [0u8; ONION_V3_RAW_LEN];
@@ -69,7 +71,7 @@ impl OnionAddrV3 {
     pub fn checksum(self) -> u16 { self.checksum }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Display, Error)]
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(doc_comments)]
 pub enum OnionAddrError {
@@ -91,6 +93,10 @@ pub enum OnionAddrError {
         found: u16,
         addr: String,
     },
+
+    /// address contains invalid public key
+    #[from(EcPkInvalid)]
+    InvalidKey,
 }
 
 impl FromStr for OnionAddrV3 {
@@ -108,8 +114,9 @@ impl FromStr for OnionAddrV3 {
         if ver != 3 {
             return Err(OnionAddrError::VersionMismatch(s.to_owned(), ver));
         }
-        let pk =
-            OnionAddrV3::from(ed25519_compact::PublicKey::from_slice(&data[..32]).expect("fixed length"));
+        let mut key = [0u8; 32];
+        key.copy_from_slice(&data[..32]);
+        let pk = OnionAddrV3::from(PublicKey::from_pk_compressed(key)?);
         let checksum = u16::from_le_bytes([data[32], data[33]]);
         if pk.checksum != checksum {
             return Err(OnionAddrError::InvalidChecksum {

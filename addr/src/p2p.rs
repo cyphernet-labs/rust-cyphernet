@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ use std::io;
 use std::net::{self, ToSocketAddrs};
 use std::str::FromStr;
 
-use super::{Addr, AddrParseError};
-use crate::addr::{Host, NetAddr, PartialAddr, ToSocketAddr};
-use crate::crypto::EcPk;
+use cypher::EcPk;
+
+use crate::{Addr, AddrParseError, Host, NetAddr, PartialAddr, ToSocketAddr};
 
 #[derive(Debug, Display, Error, From)]
 #[display(doc_comments)]

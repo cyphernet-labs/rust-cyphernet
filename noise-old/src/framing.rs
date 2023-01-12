@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,10 +29,10 @@ pub const KEY_ROTATION_PERIOD: u32 = 1000;
 
 #[derive(Clone, Debug)]
 pub struct NoiseEncryptor {
-    pub(in crate::noise) sending_key: SymmetricKey,
-    pub(in crate::noise) sending_chaining_key: SymmetricKey,
-    pub(in crate::noise) sending_nonce: u32,
-    pub(in crate::noise) remote_pubkey: PublicKey,
+    pub(crate) sending_key: SymmetricKey,
+    pub(crate) sending_chaining_key: SymmetricKey,
+    pub(crate) sending_nonce: u32,
+    pub(crate) remote_pubkey: PublicKey,
 }
 
 impl NoiseEncryptor {
@@ -82,15 +82,15 @@ impl NoiseEncryptor {
 
 #[derive(Clone, Debug)]
 pub struct NoiseDecryptor {
-    pub(in crate::noise) receiving_key: SymmetricKey,
-    pub(in crate::noise) receiving_chaining_key: SymmetricKey,
-    pub(in crate::noise) receiving_nonce: u32,
+    pub(crate) receiving_key: SymmetricKey,
+    pub(crate) receiving_chaining_key: SymmetricKey,
+    pub(crate) receiving_nonce: u32,
 
-    pub(in crate::noise) pending_message_length: Option<usize>,
-    pub(in crate::noise) read_buffer: Option<Vec<u8>>,
-    pub(in crate::noise) poisoned: bool, /* signal an error has occurred so None is returned on
-                                          * iteration after failure */
-    pub(in crate::noise) remote_pubkey: PublicKey,
+    pub(crate) pending_message_length: Option<usize>,
+    pub(crate) read_buffer: Option<Vec<u8>>,
+    pub(crate) poisoned: bool, /* signal an error has occurred so None is returned on
+                                * iteration after failure */
+    pub(crate) remote_pubkey: PublicKey,
 }
 
 impl NoiseDecryptor {

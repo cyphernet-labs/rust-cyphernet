@@ -1,0 +1,26 @@
+[package]
+name = "cypheraddr"
+version = "0.1.0"
+description = "Network address types supporting proxying, mixnets, P2P with minimalistic dependencies (part of cyphernet suite)"
+keywords = ["cyphernet", "privacy", "cypherpunk", "mixnet", "tor", "nym", "i2p", "proxy", "socks5"]
+categories = ["network-programming", "encoding"]
+readme = "README.md"
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+amplify = { workspace = true }
+cyphergraphy = { path = "../cyphergraphy", features = ["ed25519"], optional = true }
+sha3 = { version = "0.10.6", optional = true }
+base32 = { version = "0.4.0", optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
+
+[features]
+dns = []
+tor = ["sha3", "cyphergraphy", "base32"]
+i2p = ["cyphergraphy"]
+nym = []

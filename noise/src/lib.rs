@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,4 +19,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod sha2_256;
+#[macro_use]
+extern crate amplify;
+
+pub mod error;
+mod framework;
+
+pub use framework::*;
+
+pub type SymmetricKey = [u8; 32];
