@@ -25,7 +25,7 @@ mod handshake;
 pub use handshake::NoiseXkState;
 
 mod init {
-    use ed25519::x25519::{KeyPair, PublicKey, SecretKey};
+    use ed25519_compact::x25519::{KeyPair, PublicKey, SecretKey};
 
     use super::NoiseXkState;
     use crate::noise::framing::NoiseTranscoder;

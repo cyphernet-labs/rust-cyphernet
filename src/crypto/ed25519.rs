@@ -19,200 +19,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::cmp::Ordering;
-use std::fmt::{self, Display, Formatter};
-use std::ops::Deref;
-use std::str::FromStr;
+//! Edwards25519 curve keys and EdDSA algorithm implementation for Ed25519 scheme.
 
-use ::ed25519::x25519;
-
-use super::*;
-
-#[derive(Wrapper, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-#[wrapper(Deref)]
-pub struct SharedSecret([u8; 32]);
-
-impl EcPk for x25519::PublicKey {
-    fn generator() -> Self { x25519::PublicKey::base_point() }
-}
-
-impl EcSk for x25519::SecretKey {
-    type Pk = x25519::PublicKey;
-
-    fn to_pk(&self) -> Self::Pk { self.recover_public_key().expect("invalid secret key") }
-}
-
-impl Ecdh for x25519::SecretKey {
-    type Secret = SharedSecret;
-    type Err = ::ed25519::Error;
-
-    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err> {
-        let ss = pk.dh(self)?;
-        Ok(SharedSecret(*ss))
-    }
-}
-
-impl Ecdh for PrivateKey {
-    type Secret = SharedSecret;
-    type Err = ::ed25519::Error;
-
-    fn ecdh(&self, pk: &PublicKey) -> Result<SharedSecret, ::ed25519::Error> {
-        let xpk = x25519::PublicKey::from_ed25519(&pk.0)?;
-        let xsk = x25519::SecretKey::from_ed25519(&self.0)?;
-        let ss = xpk.dh(&xsk)?;
-        Ok(SharedSecret(*ss))
-    }
-}
-
-#[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug, From)]
-#[wrapper(Deref)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(into = "String", try_from = "String")
-)]
-pub struct PublicKey(#[from] ::ed25519::PublicKey);
-
-impl PartialOrd for PublicKey {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.as_ref().partial_cmp(other.0.as_ref())
-    }
-}
-
-impl Ord for PublicKey {
-    fn cmp(&self, other: &Self) -> Ordering { self.0.as_ref().cmp(other.0.as_ref()) }
-}
-
-impl PublicKey {
-    /// Multicodec key type for Ed25519 keys.
-    pub const MULTICODEC_TYPE: [u8; 2] = [0xED, 0x1];
-
-    /// Encode public key in human-readable format.
-    ///
-    /// We use the format specified by the DID `key` method, which is described as:
-    ///
-    /// `did:key:MULTIBASE(base58-btc, MULTICODEC(public-key-type, raw-public-key-bytes))`
-    pub fn to_human(&self) -> String {
-        let mut buf = [0; 2 + ::ed25519::PublicKey::BYTES];
-        buf[..2].copy_from_slice(&Self::MULTICODEC_TYPE);
-        buf[2..].copy_from_slice(self.0.deref());
-
-        multibase::encode(multibase::Base::Base58Btc, buf)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
-        ::ed25519::PublicKey::from_pem(pem).map(Self)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
-        ::ed25519::PublicKey::from_der(der).map(Self::from)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn to_pem(&self) -> String { self.0.to_pem() }
-}
-
-impl From<[u8; 32]> for PublicKey {
-    fn from(other: [u8; 32]) -> Self { Self(::ed25519::PublicKey::new(other)) }
-}
-
-impl TryFrom<&[u8]> for PublicKey {
-    type Error = ::ed25519::Error;
-
-    fn try_from(other: &[u8]) -> Result<Self, Self::Error> {
-        ::ed25519::PublicKey::from_slice(other).map(Self)
-    }
-}
-
-#[derive(Debug, Display, Error, From)]
-#[display(doc_comments)]
-pub enum PublicKeyError {
-    /// invalid length {0}
-    InvalidLength(usize),
-
-    /// invalid multibase string {0}
-    #[from]
-    Multibase(multibase::Error),
-
-    /// invalid multicodec prefix, expected {0:?}
-    Multicodec([u8; 2]),
-
-    /// invalid key {0}
-    #[from]
-    InvalidKey(::ed25519::Error),
-}
-
-impl EcPk for PublicKey {
-    fn generator() -> Self {
-        // TODO: Fixme
-        PublicKey(::ed25519::PublicKey::new([0u8; 32]))
-    }
-}
-
-impl Display for PublicKey {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.to_human()) }
-}
-
-impl FromStr for PublicKey {
-    type Err = PublicKeyError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_, bytes) = multibase::decode(s)?;
-
-        if let Some(bytes) = bytes.strip_prefix(&Self::MULTICODEC_TYPE) {
-            let key = ::ed25519::PublicKey::from_slice(bytes)?;
-
-            Ok(Self(key))
-        } else {
-            Err(PublicKeyError::Multicodec(Self::MULTICODEC_TYPE))
-        }
-    }
-}
-
-impl From<PublicKey> for String {
-    fn from(other: PublicKey) -> Self { other.to_human() }
-}
-
-impl TryFrom<String> for PublicKey {
-    type Error = PublicKeyError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
-}
-
-#[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
-#[wrapper(Deref)]
-pub struct PrivateKey(#[from] ::ed25519::SecretKey);
-
-impl PartialOrd for PrivateKey {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
-}
-
-impl Ord for PrivateKey {
-    fn cmp(&self, other: &Self) -> Ordering { self.0.cmp(&other.0) }
-}
-
-impl EcSk for PrivateKey {
-    type Pk = PublicKey;
-
-    fn to_pk(&self) -> PublicKey { self.0.public_key().into() }
-}
-
-impl PrivateKey {
-    #[cfg(feature = "pem")]
-    pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
-        ::ed25519::SecretKey::from_pem(pem).map(Self::from)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
-        ::ed25519::SecretKey::from_der(der).map(Self::from)
-    }
-
-    #[cfg(feature = "pem")]
-    pub fn to_pem(&self) -> String { self.0.to_pem() }
-}
 
 /// Cryptographic signature.
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -283,27 +91,106 @@ impl FromStr for Signature {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::str::FromStr;
 
-    use quickcheck_macros::quickcheck;
+// ============================================================================
+// Display and from string
 
-    use super::PublicKey;
+#[cfg(feature = "multibase")]
+mod human_readable {
+    pub use super::*;
 
-    #[quickcheck]
-    fn prop_encode_decode(input: PublicKey) {
-        let encoded = input.to_string();
-        let decoded = PublicKey::from_str(&encoded).unwrap();
+    #[derive(Debug, Display, Error, From)]
+    #[display(doc_comments)]
+    pub enum PublicKeyError {
+        /// invalid length {0}
+        InvalidLength(usize),
 
-        assert_eq!(input, decoded);
+        /// invalid multibase string {0}
+        #[from]
+        Multibase(multibase::Error),
+
+        /// invalid multicodec prefix, expected {0:?}
+        Multicodec([u8; 2]),
+
+        /// invalid key {0}
+        #[from]
+        InvalidKey(ed25519_compact::Error),
     }
 
-    #[test]
-    fn test_encode_decode() {
-        let input = "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK";
-        let key = PublicKey::from_str(input).unwrap();
+    impl PublicKey {
+        /// Multicodec key type for Ed25519 keys.
+        pub const MULTICODEC_TYPE: [u8; 2] = [0xED, 0x1];
 
-        assert_eq!(key.to_string(), input);
+        /// Encode public key in human-readable format.
+        ///
+        /// We use the format specified by the DID `key` method, which is described as:
+        ///
+        /// `did:key:MULTIBASE(base58-btc, MULTICODEC(public-key-type, raw-public-key-bytes))`
+        pub fn to_human_readable(&self) -> String {
+            let mut buf = [0; 2 + ::ed25519::PublicKey::BYTES];
+            buf[..2].copy_from_slice(&Self::MULTICODEC_TYPE);
+            buf[2..].copy_from_slice(self.0.deref());
+
+            multibase::encode(multibase::Base::Base58Btc, buf)
+        }
+    }
+
+    impl Display for PublicKey {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { f.write_str(&self.to_human()) }
+    }
+
+    impl FromStr for PublicKey {
+        type Err = PublicKeyError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            let (_, bytes) = multibase::decode(s)?;
+
+            if let Some(bytes) = bytes.strip_prefix(&Self::MULTICODEC_TYPE) {
+                let key = ::ed25519::PublicKey::from_slice(bytes)?;
+
+                Ok(Self(key))
+            } else {
+                Err(PublicKeyError::Multicodec(Self::MULTICODEC_TYPE))
+            }
+        }
+    }
+
+    impl From<PublicKey> for String {
+        fn from(other: PublicKey) -> Self { other.to_human() }
+    }
+
+    impl TryFrom<String> for PublicKey {
+        type Error = PublicKeyError;
+
+        fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
+    }
+}
+
+#[cfg(feature = "pem")]
+mod pem_der {
+    use super::*;
+
+    impl PublicKey {
+        pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
+            ::ed25519::PublicKey::from_pem(pem).map(Self)
+        }
+
+        pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
+            ::ed25519::PublicKey::from_der(der).map(Self::from)
+        }
+
+        pub fn to_pem(&self) -> String { self.0.to_pem() }
+    }
+
+    impl PrivateKey {
+        pub fn from_pem(pem: &str) -> Result<Self, ::ed25519::Error> {
+            ::ed25519::SecretKey::from_pem(pem).map(Self::from)
+        }
+
+        pub fn from_der(der: &[u8]) -> Result<Self, ::ed25519::Error> {
+            ::ed25519::SecretKey::from_der(der).map(Self::from)
+        }
+
+        pub fn to_pem(&self) -> String { self.0.to_pem() }
     }
 }

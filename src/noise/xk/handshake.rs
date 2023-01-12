@@ -21,7 +21,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ed25519::x25519::{PublicKey, SecretKey};
+use ed25519_compact::x25519::{PublicKey, SecretKey};
 use sha2::{Digest, Sha256};
 
 use super::ceremony::{

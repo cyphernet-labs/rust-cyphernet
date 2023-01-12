@@ -19,7 +19,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ed25519::x25519::PublicKey;
+use ed25519_compact::x25519::PublicKey;
 
 use super::hkdf::sha2_256 as hkdf;
 use super::{chacha, EncryptionError, SymmetricKey};

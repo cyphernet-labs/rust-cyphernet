@@ -35,12 +35,12 @@ pub const ONION_V3_RAW_LEN: usize = 35;
     serde(into = "String", try_from = "String")
 )]
 pub struct OnionAddrV3 {
-    pk: ed25519::PublicKey,
+    pk: ed25519_compact::PublicKey,
     checksum: u16,
 }
 
-impl From<ed25519::PublicKey> for OnionAddrV3 {
-    fn from(pk: ed25519::PublicKey) -> Self {
+impl From<ed25519_compact::PublicKey> for OnionAddrV3 {
+    fn from(pk: ed25519_compact::PublicKey) -> Self {
         let mut h = sha3::Sha3_256::default();
         h.update(b".onion checksum");
         h.update(&pk[..]);
@@ -51,12 +51,12 @@ impl From<ed25519::PublicKey> for OnionAddrV3 {
     }
 }
 
-impl From<OnionAddrV3> for ed25519::PublicKey {
+impl From<OnionAddrV3> for ed25519_compact::PublicKey {
     fn from(onion: OnionAddrV3) -> Self { onion.pk }
 }
 
 impl OnionAddrV3 {
-    pub fn into_public_key(self) -> ed25519::PublicKey { self.pk }
+    pub fn into_public_key(self) -> ed25519_compact::PublicKey { self.pk }
 
     pub fn into_raw_bytes(self) -> [u8; ONION_V3_RAW_LEN] {
         let mut data = [0u8; ONION_V3_RAW_LEN];
@@ -109,7 +109,7 @@ impl FromStr for OnionAddrV3 {
             return Err(OnionAddrError::VersionMismatch(s.to_owned(), ver));
         }
         let pk =
-            OnionAddrV3::from(ed25519::PublicKey::from_slice(&data[..32]).expect("fixed length"));
+            OnionAddrV3::from(ed25519_compact::PublicKey::from_slice(&data[..32]).expect("fixed length"));
         let checksum = u16::from_le_bytes([data[32], data[33]]);
         if pk.checksum != checksum {
             return Err(OnionAddrError::InvalidChecksum {

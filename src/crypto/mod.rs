@@ -19,36 +19,103 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "ed25519")]
-pub mod ed25519;
+use amplify::IoError;
 
-pub trait EcPk: Clone + Eq {
-    fn generator() -> Self;
+#[cfg(feature = "ed25519")]
+pub mod x25519;
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display("invalid secret key")]
+#[non_exhaustive]
+pub struct EcSkInvalid {}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display("invalid public key")]
+#[non_exhaustive]
+pub struct EcPkInvalid {}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+#[non_exhaustive]
+pub enum EcdhError {
+    /// public key provided for the ECDH is weak key
+    WeakPk,
+
+    #[display(inner)]
+    #[from]
+    InvalidPk(EcPkInvalid),
+
+    #[display(inner)]
+    #[from]
+    InvalidSk(EcSkInvalid)
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum EcSerError {
+    #[display(inner)]
+    #[from]
+    Io(IoError),
+
+    /// public key has invalid length {0}
+    InvalidKeyLength(usize),
+
+    #[display(inner)]
+    #[from]
+    InvalidKey(EcPkInvalid)
+}
+
+/// Elliptic-curve based public key type which can be used in ECDH or signature schemes.
+///
+/// # Safety
+///
+/// The type provides no guarantees on the key validity upon deserialization.
+pub trait EcPk: Clone + Eq {
+    const COMPRESSED_LEN: usize;
+    const CURVE_NAME: &'static str;
+
+    // TODO: When generic_const_exprs arrive switch to Self::COMPRESSED_LEN arrays
+    type Compressed: Copy + Sized + Send;
+
+    fn base_point() -> Self;
+
+    fn to_pk_compressed(&self) -> Self::Compressed;
+    fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid>;
+}
+
+/// Elliptic-curve based private key type.
+///
+/// # Safety
+///
+/// The type provides no guarantees on the key validity upon deserialization.
 pub trait EcSk: Eq {
     type Pk: EcPk;
-    fn to_pk(&self) -> Self::Pk;
+    fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid>;
 }
 
+/// Elliptic-curve based public key type which can be used for ECDH.
+///
+/// # Safety
+///
+/// The type provides no guarantees on the key validity upon deserialization.
 pub trait Ecdh: EcSk {
-    type Secret: Sized;
-    type Err;
+    type SharedSecret: Copy + Sized + Send;
 
-    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::Secret, Self::Err>;
+    fn ecdh(&self, pk: &Self::Pk) -> Result<Self::SharedSecret, EcdhError>;
 }
 
 pub trait Digest {
     const OUTPUT_LEN: usize;
-    type Key;
-    type Midstate: Copy + Sized + Send;
+
     type Output: Copy + Sized + Send;
 
+    fn digest(&mut self);
+    fn finalize(self) -> Self::Output;
+}
+
+pub trait KeyedDigest: Digest {
+    type Key;
     fn with_key(key: Self::Key) -> Self;
-    fn from_midstate(midstate: Self::Midstate) -> Self;
-    fn to_midstate(&self) -> Self::Midstate;
-    fn input(&mut self);
-    fn output(&self) -> Self::Output;
 }
 
 /*
