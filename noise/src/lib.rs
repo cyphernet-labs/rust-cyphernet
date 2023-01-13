@@ -28,9 +28,9 @@ mod cipher;
 mod hkdf;
 mod state;
 
-pub use state::{CipherState, HandshakeState};
+pub use state::{CipherState, NoiseState};
 
 pub type SymmetricKey = [u8; 32];
-pub type ChainingKey<D: cypher::Digest> = D::Output;
-pub type HandshakeHash<D: cypher::Digest> = D::Output;
+pub type ChainingKey<D> = <D as cypher::Digest>::Output;
+pub type HandshakeHash<D> = <D as cypher::Digest>::Output;
 pub type NoiseNonce = u64;

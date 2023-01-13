@@ -111,7 +111,7 @@ impl CipherState {
         }
     }
 
-    fn rekey(&mut self) { self.k = rekey(self.k); }
+    pub fn rekey(&mut self) { self.k = rekey(self.k); }
 }
 
 #[derive(Clone, Eq, PartialEq)]
@@ -152,6 +152,8 @@ impl<D: Digest> SymmetricState<D> {
         self.h = D::digest_concat([self.h.as_ref(), data.as_ref()]);
     }
 
+    // TODO: Use in PSK
+    #[allow(dead_code)]
     pub fn mix_key_and_hash(&mut self, input_key_material: impl AsRef<[u8]>) {
         // Sets ck, temp_h, temp_k = HKDF(ck, input_key_material, 3).
         let (ck, temp_h, temp_k) = hkdf_3::<D>(self.ck, input_key_material);
