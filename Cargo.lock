@@ -493,6 +493,10 @@ checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
 [[package]]
 name = "socks5-client"
 version = "0.1.0"
+dependencies = [
+ "amplify",
+ "cypheraddr",
+]
 
 [[package]]
 name = "subtle"

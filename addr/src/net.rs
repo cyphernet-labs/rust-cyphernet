@@ -35,6 +35,10 @@ pub struct NetAddr<H: Host> {
     pub port: u16,
 }
 
+impl<H: Host> NetAddr<H> {
+    pub fn new(host: H, port: u16) -> Self { Self { host, port } }
+}
+
 impl<H: Localhost> NetAddr<H> {
     pub fn localhost(port: u16) -> Self {
         Self {

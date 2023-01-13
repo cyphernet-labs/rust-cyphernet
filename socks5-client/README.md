@@ -1,4 +1,4 @@
-# Eidolon: network authentication separated from encryption
+# Minimalistic Rust SOCKS5 client library
 
 ![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
 ![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
@@ -12,14 +12,7 @@
 
 ## Overview
 
-Most of the existing network protocols providing encryption, such as TLS (or 
-older SSL), SSH, Noise Framework combine both authentication and encryption.
-However, in many cases the authentication is desired to be separate from the
-encryption layer, which may operate with just an ephemeral keys.
-
-Eidolon is a simple binary authentication protocol for network connections
-abstracted from the encryption layer, which can be combined with virtually
-any encryption protocols of today or a future.
+Pure rust SOCKS5 protocol implementation for a client with zero dependencies.
 
 The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)
 and used by it for generic implementation of noise protocol framework abstracted
@@ -29,7 +22,7 @@ from the underlying curve.
 ## Manifest
 
 ```yaml
-Name: eidolon
+Name: socks5-client
 Type: Library
 Kind: Free software
 License: Apache-2.0

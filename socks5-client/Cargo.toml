@@ -1,8 +1,17 @@
 [package]
 name = "socks5-client"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Socks5 clinet minimalistic library"
+keywords = ["cyphernet", "privacy", "noise", "end-to-end", "ecryption"]
+categories = ["network-programming", "cryptography"]
+readme = "README.md"
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [dependencies]
+amplify = { workspace = true }
+cypheraddr = { path = "../addr" }
