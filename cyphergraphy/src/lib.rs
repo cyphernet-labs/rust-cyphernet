@@ -44,10 +44,15 @@ pub struct EcSkInvalid {}
 pub struct EcPkInvalid {}
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display("invalid signature data")]
+#[non_exhaustive]
+pub struct EcSigInvalid {}
+
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 #[non_exhaustive]
 pub enum EcdhError {
-    /// public key provided for the ECDH is weak key
+    /// public key provided for the ECDH is a weak key
     WeakPk,
 
     #[display(inner)]
@@ -77,6 +82,25 @@ pub enum EcSerError {
     DataEncoding(String),
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum EcVerifyError {
+    /// public key provided for the ECDH is weak key
+    WeakPk,
+
+    #[display(inner)]
+    #[from]
+    InvalidPk(EcPkInvalid),
+
+    #[display(inner)]
+    #[from]
+    InvalidSignature(EcSigInvalid),
+
+    /// the provided signature does not matches public key or is not valid for
+    /// the given message
+    SignatureMismatch,
+}
+
 /// Elliptic-curve based public key type which can be used in ECDH or signature schemes.
 ///
 /// # Safety
@@ -101,12 +125,27 @@ pub trait EcPk: Clone + Eq {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcSk: Eq {
+pub trait EcSk {
     type Pk: EcPk;
 
     fn generate_keypair() -> (Self, Self::Pk)
     where Self: Sized;
     fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid>;
+}
+
+/// Marker trait for elliptic-curve based signatures
+pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> {
+    const COMPRESSED_LEN: usize;
+
+    type Pk: EcPk;
+    // TODO: When generic_const_exprs arrive switch to Self::COMPRESSED_LEN arrays
+    type Compressed: Copy + Sized + Send + AsRef<[u8]>;
+
+    fn to_sig_compressed(&self) -> Self::Compressed;
+    fn from_sig_compressed(sig: Self::Compressed) -> Result<Self, EcSigInvalid>;
+    fn from_sig_compressed_slice(slice: &[u8]) -> Result<Self, EcSigInvalid>;
+
+    fn verify(&self, pk: &Self::Pk, msg: impl AsRef<[u8]>) -> Result<(), EcVerifyError>;
 }
 
 /// Elliptic-curve based public key type which can be used for ECDH.
@@ -122,9 +161,25 @@ pub trait Ecdh: EcSk {
 
 /// Signature scheme trait
 pub trait EcSign: EcSk {
-    type Sig: Copy + Sized + Send;
+    type Sig: EcSig<Pk = Self::Pk>;
 
+    fn cert(&self) -> Result<Cert<Self::Sig>, EcSkInvalid> {
+        let pk = self.to_pk()?;
+        let sig = self.sign(pk.to_pk_compressed());
+        Ok(Cert { pk, sig })
+    }
     fn sign(&self, msg: impl AsRef<[u8]>) -> Self::Sig;
+}
+
+pub struct Cert<S: EcSig> {
+    pub pk: S::Pk,
+    pub sig: S,
+}
+
+impl<S: EcSig> Cert<S> {
+    pub fn verify(&self) -> Result<(), EcVerifyError> {
+        self.sig.verify(&self.pk, &self.pk.to_pk_compressed())
+    }
 }
 
 mod ed22519_compact_err_convert {
@@ -185,6 +240,26 @@ mod ed22519_compact_err_convert {
 
                 Error::SignatureMismatch
                 | Error::InvalidSignature
+                | Error::InvalidSeed
+                | Error::InvalidBlind
+                | Error::InvalidNoise
+                | Error::ParseError
+                | Error::NonCanonical => {
+                    unreachable!("ECDH in ed25519-compact crate should not generate this errors")
+                }
+            }
+        }
+    }
+
+    impl From<Error> for EcVerifyError {
+        fn from(err: Error) -> Self {
+            match err {
+                Error::WeakPublicKey => EcVerifyError::WeakPk,
+                Error::InvalidPublicKey => EcVerifyError::InvalidPk(EcPkInvalid {}),
+                Error::SignatureMismatch => EcVerifyError::SignatureMismatch,
+                Error::InvalidSignature => EcVerifyError::InvalidSignature(EcSigInvalid {}),
+
+                Error::InvalidSecretKey
                 | Error::InvalidSeed
                 | Error::InvalidBlind
                 | Error::InvalidNoise

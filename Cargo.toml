@@ -2,6 +2,7 @@
 default-members = [
     "addr",
     "cyphergraphy",
+    "eidolon",
     "socks5-client",
     "noise",
     ".",
@@ -40,6 +41,7 @@ license = { workspace = true }
 cyphergraphy = { path = "cyphergraphy" }
 cypheraddr = { path = "addr" }
 noise-framework = { path = "noise", optional = true }
+eidolon = { path = "eidolon" }
 socks5-client = { path = "socks5-client" }
 
 [features]

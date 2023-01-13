@@ -24,7 +24,7 @@
 use std::cmp::Ordering;
 use std::ops::Deref;
 
-use crate::{EcPk, EcPkInvalid, EcSign, EcSk, EcSkInvalid};
+use crate::{EcPk, EcPkInvalid, EcSig, EcSigInvalid, EcSign, EcSk, EcSkInvalid, EcVerifyError};
 
 // ============================================================================
 // ed25519_compact keys
@@ -148,13 +148,58 @@ impl EcSign for ed25519_compact::SecretKey {
     }
 }
 
+impl EcSig for ed25519_compact::Signature {
+    const COMPRESSED_LEN: usize = 64;
+
+    type Pk = ed25519_compact::PublicKey;
+    type Compressed = [u8; 64];
+
+    fn to_sig_compressed(&self) -> Self::Compressed { *self.deref() }
+
+    fn from_sig_compressed(sig: Self::Compressed) -> Result<Self, EcSigInvalid> {
+        Ok(Self::from_slice(&sig).expect("fixed length"))
+    }
+
+    fn from_sig_compressed_slice(slice: &[u8]) -> Result<Self, EcSigInvalid> {
+        Self::from_slice(slice).map_err(|_| EcSigInvalid {})
+    }
+
+    fn verify(&self, pk: &Self::Pk, msg: impl AsRef<[u8]>) -> Result<(), EcVerifyError> {
+        pk.verify(msg, self).map_err(EcVerifyError::from)
+    }
+}
+
 /// Cryptographic signature.
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[wrapper(Deref)]
 pub struct Signature(ed25519_compact::Signature);
 
+impl AsRef<[u8]> for Signature {
+    fn as_ref(&self) -> &[u8] { self.0.as_ref() }
+}
+
 impl From<ed25519_compact::Signature> for Signature {
     fn from(other: ed25519_compact::Signature) -> Self { Self(other) }
+}
+
+impl EcSig for Signature {
+    const COMPRESSED_LEN: usize = 64;
+    type Pk = PublicKey;
+    type Compressed = [u8; 64];
+
+    fn to_sig_compressed(&self) -> Self::Compressed { self.0.to_sig_compressed() }
+
+    fn from_sig_compressed(sig: Self::Compressed) -> Result<Self, EcSigInvalid> {
+        ed25519_compact::Signature::from_sig_compressed(sig).map(Self)
+    }
+
+    fn from_sig_compressed_slice(slice: &[u8]) -> Result<Self, EcSigInvalid> {
+        ed25519_compact::Signature::from_sig_compressed_slice(slice).map(Self)
+    }
+
+    fn verify(&self, pk: &Self::Pk, msg: impl AsRef<[u8]>) -> Result<(), EcVerifyError> {
+        self.0.verify(pk, msg)
+    }
 }
 
 impl EcSign for PrivateKey {

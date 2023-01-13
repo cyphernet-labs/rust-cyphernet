@@ -221,6 +221,7 @@ version = "0.1.0"
 dependencies = [
  "cypheraddr",
  "cyphergraphy",
+ "eidolon",
  "noise-framework",
  "socks5-client",
 ]
@@ -280,6 +281,14 @@ dependencies = [
  "ct-codecs",
  "ed25519",
  "getrandom",
+]
+
+[[package]]
+name = "eidolon"
+version = "0.1.0"
+dependencies = [
+ "amplify",
+ "cyphergraphy",
 ]
 
 [[package]]
