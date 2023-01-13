@@ -210,7 +210,7 @@ impl Encoding for NetAddr<HostName> {
     }
 }
 
-impl Encoding for Result<NetAddr<HostName>, ServerError> {
+impl Encoding for Reply {
     fn decode(reader: &mut impl Read) -> Result<Self, EncodingError> {
         match u8::decode(reader)? {
             0 => Ok(Ok(NetAddr::decode(reader)?)),
