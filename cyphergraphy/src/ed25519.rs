@@ -50,10 +50,25 @@ impl EcPk for ed25519_compact::PublicKey {
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
         Ok(ed25519_compact::PublicKey::new(pk))
     }
+
+    fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
+        if slice.len() != Self::COMPRESSED_LEN {
+            return Err(EcPkInvalid {});
+        }
+        let mut buf = [0u8; 32];
+        buf.copy_from_slice(slice);
+        Self::from_pk_compressed(buf)
+    }
 }
 
 impl EcSk for ed25519_compact::SecretKey {
     type Pk = ed25519_compact::PublicKey;
+
+    fn generate_keypair() -> (Self, Self::Pk)
+    where Self: Sized {
+        let pair = ed25519_compact::KeyPair::generate();
+        (pair.sk, pair.pk)
+    }
 
     fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid> { Ok(self.public_key()) }
 }
@@ -92,6 +107,10 @@ impl EcPk for PublicKey {
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
         ed25519_compact::PublicKey::from_pk_compressed(pk).map(Self)
     }
+
+    fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
+        ed25519_compact::PublicKey::from_pk_compressed_slice(slice).map(Self)
+    }
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -108,6 +127,12 @@ impl Ord for PrivateKey {
 
 impl EcSk for PrivateKey {
     type Pk = PublicKey;
+
+    fn generate_keypair() -> (Self, Self::Pk)
+    where Self: Sized {
+        let (sk, pk) = ed25519_compact::SecretKey::generate_keypair();
+        (sk.into(), pk.into())
+    }
 
     fn to_pk(&self) -> Result<PublicKey, EcSkInvalid> { self.0.to_pk().map(PublicKey::from) }
 }

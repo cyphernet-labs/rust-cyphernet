@@ -58,6 +58,12 @@ ed25519 = ["cyphergraphy/ed25519"]
 secp256k1 = ["cyphergraphy/secp256k1"]
 bip340 = ["cyphergraphy/bip340"]
 
+# Digests
+sha2 = ["cyphergraphy/sha2"]
+sha3 = ["cyphergraphy/sha3"]
+blake3 = ["cyphergraphy/blake3"]
+hmac = ["cyphergraphy/hmac"]
+
 # Noise variants algorithms
 noise_sha2 = ["noise-framework/sha2"]
 noise_sha3 = ["noise-framework/sha3"]

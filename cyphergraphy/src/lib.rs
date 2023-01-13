@@ -25,10 +25,13 @@
 #[macro_use]
 extern crate amplify;
 
+mod digest;
 #[cfg(feature = "x25519")]
 pub mod x25519;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
+
+pub use digest::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display("invalid secret key")]
@@ -84,12 +87,13 @@ pub trait EcPk: Clone + Eq {
     const CURVE_NAME: &'static str;
 
     // TODO: When generic_const_exprs arrive switch to Self::COMPRESSED_LEN arrays
-    type Compressed: Copy + Sized + Send;
+    type Compressed: Copy + Sized + Send + AsRef<[u8]>;
 
     fn base_point() -> Self;
 
     fn to_pk_compressed(&self) -> Self::Compressed;
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid>;
+    fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid>;
 }
 
 /// Elliptic-curve based private key type.
@@ -99,6 +103,9 @@ pub trait EcPk: Clone + Eq {
 /// The type provides no guarantees on the key validity upon deserialization.
 pub trait EcSk: Eq {
     type Pk: EcPk;
+
+    fn generate_keypair() -> (Self, Self::Pk)
+    where Self: Sized;
     fn to_pk(&self) -> Result<Self::Pk, EcSkInvalid>;
 }
 
@@ -108,7 +115,7 @@ pub trait EcSk: Eq {
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
 pub trait Ecdh: EcSk {
-    type SharedSecret: Copy + Sized + Send;
+    type SharedSecret: Copy + Eq + Sized + Send + AsRef<[u8]>;
 
     fn ecdh(&self, pk: &Self::Pk) -> Result<Self::SharedSecret, EcdhError>;
 }
@@ -118,20 +125,6 @@ pub trait EcSign: EcSk {
     type Sig: Copy + Sized + Send;
 
     fn sign(&self, msg: impl AsRef<[u8]>) -> Self::Sig;
-}
-
-pub trait Digest {
-    const OUTPUT_LEN: usize;
-
-    type Output: Copy + Sized + Send;
-
-    fn digest(&mut self);
-    fn finalize(self) -> Self::Output;
-}
-
-pub trait KeyedDigest: Digest {
-    type Key;
-    fn with_key(key: Self::Key) -> Self;
 }
 
 mod ed22519_compact_err_convert {

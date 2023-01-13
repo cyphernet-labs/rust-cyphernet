@@ -24,11 +24,21 @@ ed25519-compact = { version = "2.0.2", default-features = false, optional = true
 sha2 = { version = "0.10.6", optional = true }
 sha3 = { version = "0.10.6", optional = true }
 blake3 = { version = "1.3.3", optional = true }
+hmac = { version = "0.12.1", optional = true }
 
 [features]
 x25519 = ["ed25519-compact/x25519"]
 ed25519 = ["ed25519-compact/ed25519"]
+keygen_25519 = ["ed25519-compact/random"]
+keygen_secp256k1 = ["secp256k1/rand"]
 bip340 = ["secp256k1"]
 
+# Digests:
+# sha2
+# sha3
+# blake3
+# hmac
+
+# Other:
 pem = ["ed25519-compact/pem", "ed25519-compact/std"]
 # multibase

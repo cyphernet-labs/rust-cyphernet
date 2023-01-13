@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-// Written in 2019-2023 by
+// Written in 2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Initiative, Switzerland
+// Copyright 2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cypher::{EcPkInvalid, EcSkInvalid, EcdhError};
+
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
 pub enum EncryptionError {
     /// message length {0} exceeds maximum size allowed for the encryption
     /// protocol frame.
     ExceedingMaxLength(usize),
+
+    /// invalid keys for ECDH: {0}
+    #[from]
+    Ecdh(EcdhError),
+
+    /// invalid remote public key
+    #[from]
+    InvalidPk(EcPkInvalid),
+
+    /// invalid local secret key
+    #[from]
+    InvalidSk(EcSkInvalid),
 
     /// ChaCha20Poly1305 AEAD encryptor error.
     #[from]
@@ -58,6 +72,22 @@ pub enum HandshakeError {
     /// noise handshake is complete, nothing to process.
     Complete,
 }
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display("incomplete Noise handshake")]
 pub struct IncompleteHandshake;
+
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+pub enum NoiseError {
+    /// received a non-empty payload from the remote peer when an empty payload
+    /// was expected
+    PayloadNotEmpty,
+
+    /// handshake is complete, no further advance is possible
+    HandshakeComplete,
+
+    #[display(inner)]
+    #[from]
+    Encryption(EncryptionError),
+}

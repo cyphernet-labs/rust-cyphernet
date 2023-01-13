@@ -2,10 +2,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-// Written in 2019-2023 by
+// Written in 2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Initiative, Switzerland
+// Copyright 2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,14 @@
 extern crate amplify;
 
 pub mod error;
-mod framework;
+mod patterns;
+mod cipher;
+mod hkdf;
+mod state;
 
-pub use framework::*;
+pub use state::{CipherState, HandshakeState};
 
 pub type SymmetricKey = [u8; 32];
+pub type ChainingKey<D: cypher::Digest> = D::Output;
+pub type HandshakeHash<D: cypher::Digest> = D::Output;
+pub type NoiseNonce = u64;
