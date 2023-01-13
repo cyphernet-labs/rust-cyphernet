@@ -29,14 +29,40 @@ fn hmac_hash<D: Digest>(
     key: impl AsRef<[u8]>,
     inputs: impl IntoIterator<Item = impl AsRef<[u8]>>,
 ) -> D::Output {
-    todo!();
-    /*
-    let mut engine = Hmac::<D>::with_key(key);
-    for input in inputs {
-        engine.input(input);
+    let mut ipad = [0x36u8; 128];
+    let mut opad = [0x5cu8; 128];
+    let mut iengine = D::new();
+    let mut oengine = D::new();
+
+    let key = key.as_ref();
+    if key.len() > D::BLOCK_LEN {
+        let hash = D::digest(key);
+        for (b_i, b_h) in ipad.iter_mut().zip(&hash.as_ref()[..]) {
+            *b_i ^= *b_h;
+        }
+        for (b_o, b_h) in opad.iter_mut().zip(&hash.as_ref()[..]) {
+            *b_o ^= *b_h;
+        }
+    } else {
+        for (b_i, b_h) in ipad.iter_mut().zip(key) {
+            *b_i ^= *b_h;
+        }
+        for (b_o, b_h) in opad.iter_mut().zip(key) {
+            *b_o ^= *b_h;
+        }
+    };
+
+    iengine.input(&ipad[..D::BLOCK_LEN]);
+    oengine.input(&opad[..D::BLOCK_LEN]);
+
+    for buf in inputs {
+        iengine.input(buf);
     }
-    engine.finalize()
-     */
+
+    let ihash = iengine.finalize();
+    oengine.input(&ihash.as_ref()[..]);
+    let ohash = oengine.finalize();
+    ohash
 }
 
 fn _hkdf<D: Digest>(
