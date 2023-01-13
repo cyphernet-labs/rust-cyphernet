@@ -62,7 +62,6 @@ bip340 = ["cyphergraphy/bip340"]
 sha2 = ["cyphergraphy/sha2"]
 sha3 = ["cyphergraphy/sha3"]
 blake3 = ["cyphergraphy/blake3"]
-hmac = ["cyphergraphy/hmac"]
 
 # Noise variants algorithms
 noise_sha2 = ["noise-framework/sha2"]

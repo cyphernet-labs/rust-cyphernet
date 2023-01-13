@@ -19,15 +19,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ::hmac::digest::block_buffer::Eager;
-use ::hmac::digest::consts::U256;
-use ::hmac::digest::core_api::{
-    BlockSizeUser, BufferKindUser, CoreProxy, FixedOutputCore, UpdateCore,
-};
-use ::hmac::digest::typenum::{IsLess, Le, NonZero};
-use ::hmac::digest::{FixedOutput, HashMarker};
-use ::hmac::Mac;
-
 pub trait Digest: Sized {
     const DIGEST_NAME: &'static str;
     const OUTPUT_LEN: usize;
@@ -96,55 +87,60 @@ mod sha2 {
 #[cfg(feature = "sha2")]
 pub use ::sha2::Sha256;
 
-#[cfg(feature = "hmac")]
-mod hmac {
-    use super::*;
+pub struct Hmac<D: Digest> {
+    iengine: D,
+    oengine: D,
+}
 
-    impl<D: Digest> Digest for Hmac<D>
-    where
-        D: CoreProxy,
-        D::Core: HashMarker
-            + UpdateCore
-            + FixedOutputCore
-            + BufferKindUser<BufferKind = Eager>
-            + Default
-            + Clone,
-        <D::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
-        Le<<D::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
-    {
-        const DIGEST_NAME: &'static str = "HMAC";
-        const OUTPUT_LEN: usize = D::OUTPUT_LEN;
-        const BLOCK_LEN: usize = D::BLOCK_LEN;
-        type Output = D::Output;
+impl<D: Digest> Hmac<D> {
+    pub fn keyed(key: impl AsRef<[u8]>) -> Self {
+        let mut ipad = [0x36u8; 128];
+        let mut opad = [0x5cu8; 128];
+        let mut iengine = D::new();
+        let mut oengine = D::new();
 
-        fn new() -> Self { todo!() }
+        let key = key.as_ref();
+        if key.len() > D::BLOCK_LEN {
+            let hash = D::digest(key);
+            for (b_i, b_h) in ipad.iter_mut().zip(&hash.as_ref()[..]) {
+                *b_i ^= *b_h;
+            }
+            for (b_o, b_h) in opad.iter_mut().zip(&hash.as_ref()[..]) {
+                *b_o ^= *b_h;
+            }
+        } else {
+            for (b_i, b_h) in ipad.iter_mut().zip(key) {
+                *b_i ^= *b_h;
+            }
+            for (b_o, b_h) in opad.iter_mut().zip(key) {
+                *b_o ^= *b_h;
+            }
+        };
 
-        fn input(&mut self, data: impl AsRef<[u8]>) { self.update(data.as_ref()); }
+        iengine.input(&ipad[..D::BLOCK_LEN]);
+        oengine.input(&opad[..D::BLOCK_LEN]);
 
-        fn finalize(self) -> Self::Output {
-            let out = &*self.finalize_fixed();
-            out.try_into().unwrap_or_else(|_| {
-                panic!("HMAC output size mismatches size of digest function output");
-            })
-        }
-    }
-
-    impl<D: Digest> HmacDigest<D> for Hmac<D>
-    where
-        D: CoreProxy,
-        D::Core: HashMarker
-            + UpdateCore
-            + FixedOutputCore
-            + BufferKindUser<BufferKind = Eager>
-            + Default
-            + Clone,
-        <D::Core as BlockSizeUser>::BlockSize: IsLess<U256>,
-        Le<<D::Core as BlockSizeUser>::BlockSize, U256>: NonZero,
-    {
-        fn with_key(key: impl AsRef<[u8]>) -> Self {
-            Hmac::new_from_slice(key.as_ref()).expect("HMAC takes key of any size")
-        }
+        Self { iengine, oengine }
     }
 }
-#[cfg(feature = "hmac")]
-pub use ::hmac::Hmac;
+
+impl<D: Digest> Digest for Hmac<D> {
+    const DIGEST_NAME: &'static str = "HMAC";
+    const OUTPUT_LEN: usize = D::OUTPUT_LEN;
+    const BLOCK_LEN: usize = D::BLOCK_LEN;
+    type Output = D::Output;
+
+    fn new() -> Self { Self::keyed(&[]) }
+
+    fn input(&mut self, data: impl AsRef<[u8]>) { self.iengine.input(data); }
+
+    fn finalize(mut self) -> Self::Output {
+        let ihash = self.iengine.finalize();
+        self.oengine.input(&ihash.as_ref()[..]);
+        self.oengine.finalize()
+    }
+}
+
+impl<D: Digest> HmacDigest<D> for Hmac<D> {
+    fn with_key(key: impl AsRef<[u8]>) -> Self { Self::keyed(key) }
+}
