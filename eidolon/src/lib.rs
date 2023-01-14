@@ -77,6 +77,16 @@ impl<S: EcSig> EidolonState<S> {
         }
     }
 
+    pub fn is_complete(&self) -> bool { matches!(self, Self::Complete(_)) }
+
+    pub fn remote_cert(&self) -> Option<&Cert<S>> {
+        if let Self::Complete(cert) = self {
+            Some(cert)
+        } else {
+            None
+        }
+    }
+
     fn verify_input(input: &[u8]) -> Result<Cert<S>, Error> {
         if input.len() != Self::MESSAGE_LEN {
             return Err(Error::InvalidLen(input.len()));
