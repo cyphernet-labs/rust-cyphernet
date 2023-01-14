@@ -31,7 +31,7 @@ pub mod x25519;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 
 pub use digest::*;
 
@@ -183,6 +183,12 @@ impl<S: EcSig> Cert<S> {
     pub fn verify(&self) -> Result<(), EcVerifyError> {
         self.sig.verify(&self.pk, &self.pk.to_pk_compressed())
     }
+}
+
+impl<S: EcSig> Display for Cert<S>
+where S::Pk: Display
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.pk) }
 }
 
 mod ed22519_compact_err_convert {
