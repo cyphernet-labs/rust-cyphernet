@@ -74,7 +74,7 @@ impl CipherState {
         self.n = 0;
     }
 
-    pub fn has_key(&mut self) -> bool { !self.k.is_empty() }
+    pub fn has_key(&self) -> bool { !self.k.is_empty() }
 
     pub fn nonce(&self) -> NoiseNonce { self.n }
 
@@ -228,7 +228,8 @@ pub struct HandshakeState<E: Ecdh, D: Digest> {
     is_initiator: bool,
     keyset: Keyset<E>,
     handshake_pattern: HandshakePattern,
-    message_patterns: VecDeque<&'static [MessagePattern]>,
+    read_message_patterns: VecDeque<&'static [MessagePattern]>,
+    write_message_patterns: VecDeque<&'static [MessagePattern]>,
 }
 
 impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
@@ -293,13 +294,17 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
             }
         }
 
-        let message_patterns = VecDeque::from_iter(
+        let write_message_patterns = VecDeque::from_iter(
             handshake_pattern.message_patterns(is_initiator).into_iter().copied(),
+        );
+        let read_message_patterns = VecDeque::from_iter(
+            handshake_pattern.message_patterns(!is_initiator).into_iter().copied(),
         );
 
         Self {
             handshake_pattern,
-            message_patterns,
+            read_message_patterns,
+            write_message_patterns,
             is_initiator,
             keyset,
             state,
@@ -312,7 +317,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
     ///
     /// If any EncryptAndHash() call returns an error
     fn write_message(&mut self, payload: &[u8]) -> Result<HandshakeAct, EncryptionError> {
-        match self.message_patterns.pop_front() {
+        match self.write_message_patterns.pop_front() {
             Some(seq) => {
                 let mut message_buffer = Vec::<u8>::new();
                 // 1. Fetches and deletes the next message pattern from message_patterns, then
@@ -381,7 +386,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
     ///
     /// If any DecryptAndHash() call returns an error
     fn read_message(&mut self, message: &[u8]) -> Result<HandshakeAct, EncryptionError> {
-        match self.message_patterns.pop_front() {
+        match self.read_message_patterns.pop_front() {
             Some(seq) => {
                 let mut payload_buffer = Vec::new();
                 let mut pos = 0usize;
@@ -417,8 +422,8 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                         MessagePattern::S => {
                             debug_assert!(self.keyset.rs.is_none());
                             let next_pos = match self.state.cipher.has_key() {
-                                true => 32 + 16,
-                                false => 32,
+                                true => D::OUTPUT_LEN + 16,
+                                false => D::OUTPUT_LEN,
                             };
                             let temp =
                                 self.state.decrypt_and_hash(&payload_buffer[pos..next_pos])?;
@@ -463,6 +468,30 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                 Ok(HandshakeAct::Split(c1, c2))
             }
         }
+    }
+
+    /// Provides information about next message length which should be read from a network stream.
+    fn next_read_len(&self) -> usize {
+        if self.read_message_patterns.is_empty() {
+            return 0;
+        }
+        let mut pos = 0;
+        let seq = self.read_message_patterns[0];
+        for pat in seq {
+            match pat {
+                MessagePattern::E => {
+                    pos += E::Pk::COMPRESSED_LEN;
+                }
+                MessagePattern::S if self.state.cipher.has_key() => {
+                    pos += D::OUTPUT_LEN + 16;
+                }
+                MessagePattern::S => {
+                    pos += D::OUTPUT_LEN;
+                }
+                _ => {}
+            }
+        }
+        pos
     }
 }
 
@@ -532,6 +561,21 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
                 }
             }
             NoiseState::Active { .. } => Err(NoiseError::HandshakeComplete),
+        }
+    }
+
+    /// Provides information about next message length which should be read from a network stream.
+    pub fn next_read_len(&self) -> usize {
+        match self {
+            NoiseState::Handshake(handshake) => handshake.next_read_len(),
+            NoiseState::Active { .. } => 0,
+        }
+    }
+
+    pub fn get_handshake_hash(&self) -> Option<HandshakeHash<D>> {
+        match self {
+            NoiseState::Handshake(_) => None,
+            NoiseState::Active { handshake_hash, .. } => Some(*handshake_hash),
         }
     }
 }
