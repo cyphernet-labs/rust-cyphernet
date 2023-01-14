@@ -27,8 +27,7 @@ for end-to-end encryption and authorization:
   - Blake3
 
 The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)
-and used by it for generic implementation of noise protocol framework abstracted 
-from the underlying curve.
+and used by other libraries of the suite for handling internet addresses.
 
 
 ## Manifest

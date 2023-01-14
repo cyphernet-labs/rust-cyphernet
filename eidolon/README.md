@@ -21,9 +21,7 @@ Eidolon is a simple binary authentication protocol for network connections
 abstracted from the encryption layer, which can be combined with virtually
 any encryption protocols of today or a future.
 
-The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)
-and used by it for generic implementation of noise protocol framework abstracted
-from the underlying curve.
+The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet).
 
 
 ## Manifest
