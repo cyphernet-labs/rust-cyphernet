@@ -29,6 +29,12 @@ use crate::*;
 // ============================================================================
 // ed25519_compact keys
 
+impl MultiDisplay for ed25519_compact::x25519::PublicKey {
+    type Format = Encoding;
+    type Display = String;
+    fn display_fmt(&self, f: &Self::Format) -> String { f.encode(self.as_slice()) }
+}
+
 impl EcPk for ed25519_compact::x25519::PublicKey {
     const COMPRESSED_LEN: usize = 32;
     const CURVE_NAME: &'static str = "Curve25519";
@@ -119,6 +125,13 @@ impl EcPk for PublicKey {
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
         ed25519_compact::x25519::PublicKey::from_pk_compressed_slice(slice).map(Self)
     }
+}
+
+impl MultiDisplay for PublicKey {
+    type Format = Encoding;
+    type Display = String;
+
+    fn display_fmt(&self, f: &Self::Format) -> Self::Display { self.0.display_fmt(f) }
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]

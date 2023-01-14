@@ -31,9 +31,13 @@ pub mod x25519;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
-use std::fmt::{Debug, Display, Formatter};
+pub mod display;
+
+use std::fmt::Debug;
 
 pub use digest::*;
+
+use crate::display::{Encoding, MultiDisplay};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display("invalid secret key")]
@@ -108,7 +112,7 @@ pub enum EcVerifyError {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcPk: Clone + Eq + Debug {
+pub trait EcPk: Clone + Eq + Debug + MultiDisplay {
     const COMPRESSED_LEN: usize;
     const CURVE_NAME: &'static str;
 
@@ -136,7 +140,7 @@ pub trait EcSk {
 }
 
 /// Marker trait for elliptic-curve based signatures
-pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> + Debug {
+pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> + Debug + MultiDisplay {
     const COMPRESSED_LEN: usize;
 
     type Pk: EcPk;
@@ -183,12 +187,6 @@ impl<S: EcSig> Cert<S> {
     pub fn verify(&self) -> Result<(), EcVerifyError> {
         self.sig.verify(&self.pk, &self.pk.to_pk_compressed())
     }
-}
-
-impl<S: EcSig> Display for Cert<S>
-where S::Pk: Display
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.pk) }
 }
 
 mod ed22519_compact_err_convert {

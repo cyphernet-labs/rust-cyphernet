@@ -72,7 +72,8 @@ noise_blake3 = ["noise-framework/blake3"]
 noise_x25519 = ["noise-framework/x25519"]
 noise_secp256k1 = ["noise-framework/secp256k1"]
 
-# Other
+# Encodings
 pem = ["cyphergraphy/pem"]
 multibase = ["cyphergraphy/multibase"]
 serde = ["cypheraddr/serde"]
+bech32 = ["cyphergraphy/bech32"]

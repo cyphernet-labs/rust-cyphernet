@@ -24,10 +24,18 @@
 use std::cmp::Ordering;
 use std::ops::Deref;
 
+use crate::display::{Encoding, MultiDisplay};
 use crate::{EcPk, EcPkInvalid, EcSig, EcSigInvalid, EcSign, EcSk, EcSkInvalid, EcVerifyError};
 
 // ============================================================================
 // ed25519_compact keys
+
+impl MultiDisplay for ed25519_compact::PublicKey {
+    type Format = Encoding;
+    type Display = String;
+
+    fn display_fmt(&self, f: &Self::Format) -> Self::Display { f.encode(self.as_slice()) }
+}
 
 impl EcPk for ed25519_compact::PublicKey {
     const COMPRESSED_LEN: usize = 32;
@@ -113,6 +121,12 @@ impl EcPk for PublicKey {
     }
 }
 
+impl MultiDisplay for PublicKey {
+    type Format = Encoding;
+    type Display = String;
+    fn display_fmt(&self, f: &Self::Format) -> Self::Display { self.0.display_fmt(f) }
+}
+
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
 pub struct PrivateKey(#[from] ed25519_compact::SecretKey);
@@ -148,6 +162,12 @@ impl EcSign for ed25519_compact::SecretKey {
     }
 }
 
+impl MultiDisplay for ed25519_compact::Signature {
+    type Format = Encoding;
+    type Display = String;
+    fn display_fmt(&self, f: &Self::Format) -> Self::Display { f.encode(self.as_slice()) }
+}
+
 impl EcSig for ed25519_compact::Signature {
     const COMPRESSED_LEN: usize = 64;
 
@@ -180,6 +200,12 @@ impl AsRef<[u8]> for Signature {
 
 impl From<ed25519_compact::Signature> for Signature {
     fn from(other: ed25519_compact::Signature) -> Self { Self(other) }
+}
+
+impl MultiDisplay for Signature {
+    type Format = Encoding;
+    type Display = String;
+    fn display_fmt(&self, f: &Self::Format) -> Self::Display { self.0.display_fmt(f) }
 }
 
 impl EcSig for Signature {
