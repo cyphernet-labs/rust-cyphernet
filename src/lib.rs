@@ -52,7 +52,18 @@
 //! * [`addr::ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
 
 pub extern crate cypheraddr as addr;
-#[cfg(feature = "noise-framework")]
-pub extern crate noise;
+
+pub mod encrypt {
+    #[cfg(feature = "noise-framework")]
+    pub extern crate noise;
+}
+
+pub mod auth {
+    pub extern crate eidolon;
+}
+
+pub mod proxy {
+    pub extern crate socks5_client as socks5;
+}
 
 pub use cypher::*;
