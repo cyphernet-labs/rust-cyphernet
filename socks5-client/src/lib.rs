@@ -36,9 +36,7 @@ use std::io;
 use cypheraddr::{HostName, NetAddr};
 pub use error::ServerError;
 
-use crate::encoding::{Encoding, EncodingError};
-
-pub type Reply = Result<NetAddr<HostName>, ServerError>;
+use crate::encoding::{Encoding, EncodingError, DOMAIN, IPV4, IPV6};
 
 #[derive(Debug, Display, Error, From)]
 #[display(inner)]
@@ -68,7 +66,8 @@ pub enum Error {
 pub enum Socks5 {
     Initial(NetAddr<HostName>),
     Connected(NetAddr<HostName>),
-    Connecting,
+    Awaiting,
+    Reading(u8, u8),
     Active(NetAddr<HostName>),
     Rejected(ServerError),
     Failed(Error),
@@ -101,24 +100,43 @@ impl Socks5 {
 
                 let mut out = vec![0x05, 0x01, 0x00];
                 addr.encode(&mut out)?;
-                *self = Socks5::Connecting;
+                *self = Socks5::Awaiting;
                 Ok(out)
             }
-            Socks5::Connecting => {
-                let mut cursor = io::Cursor::new(input);
-                match Reply::decode(&mut cursor)? {
-                    Ok(addr) => {
-                        *self = Socks5::Active(addr);
-                        Ok(vec![])
-                    }
-                    Err(code) => {
-                        *self = Socks5::Rejected(code);
-                        Err(Error::Closed)
-                    }
+            Socks5::Awaiting => {
+                debug_assert_eq!(input.len(), 3);
+                if input[0] != 0x00 {
+                    let err = ServerError::from(input[1]);
+                    *self = Socks5::Rejected(err);
+                    return Err(Error::Closed);
                 }
+                *self = Socks5::Reading(input[1], input[2]);
+                Ok(vec![])
+            }
+            Socks5::Reading(code1, code2) => {
+                let mut vec = Vec::with_capacity(input.len() + 2);
+                vec.extend_from_slice(&[*code1, *code2]);
+                vec.extend_from_slice(input);
+                let mut cursor = io::Cursor::new(vec);
+                let addr = NetAddr::<HostName>::decode(&mut cursor)?;
+                *self = Socks5::Active(addr);
+                Ok(vec![])
             }
             Socks5::Active(_) => Err(Error::Completed),
             _ => Err(Error::Closed),
+        }
+    }
+
+    pub fn next_read_len(&self) -> usize {
+        match self {
+            Socks5::Initial(_) => 0,
+            Socks5::Connected(_) => 2,
+            Socks5::Awaiting => 3,
+            Socks5::Reading(ty, _) if *ty == IPV4 => 4,
+            Socks5::Reading(ty, _) if *ty == IPV6 => 16,
+            Socks5::Reading(ty, len) if *ty == DOMAIN => *len as usize,
+            Socks5::Reading(_, _) => 1,
+            Socks5::Active(_) | Socks5::Rejected(_) | Socks5::Failed(_) => 0,
         }
     }
 }

@@ -153,9 +153,9 @@ impl Encoding for SocketAddrV6 {
     }
 }
 
-const IPV4: u8 = 1;
-const IPV6: u8 = 4;
-const DOMAIN: u8 = 3;
+pub(crate) const IPV4: u8 = 1;
+pub(crate) const IPV6: u8 = 4;
+pub(crate) const DOMAIN: u8 = 3;
 
 impl Encoding for HostName {
     fn decode(reader: &mut impl Read) -> Result<Self, EncodingError> {
@@ -207,24 +207,5 @@ impl Encoding for NetAddr<HostName> {
     fn encode(&self, writer: &mut impl Write) -> Result<(), EncodingError> {
         self.host.encode(writer)?;
         self.port.encode(writer).map_err(EncodingError::from)
-    }
-}
-
-impl Encoding for Reply {
-    fn decode(reader: &mut impl Read) -> Result<Self, EncodingError> {
-        match u8::decode(reader)? {
-            0 => Ok(Ok(NetAddr::decode(reader)?)),
-            error_code => Ok(Err(ServerError::from(error_code))),
-        }
-    }
-
-    fn encode(&self, writer: &mut impl Write) -> Result<(), EncodingError> {
-        match self {
-            Ok(addr) => {
-                0u8.encode(writer)?;
-                addr.encode(writer)
-            }
-            Err(err) => (*err as u8).encode(writer),
-        }
     }
 }
