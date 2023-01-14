@@ -114,7 +114,7 @@ impl CipherState {
     pub fn rekey(&mut self) { self.k = rekey(self.k); }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct SymmetricState<D: Digest> {
     cipher: CipherState,
     ck: ChainingKey<D>,
@@ -222,7 +222,7 @@ impl<D: Digest> SymmetricState<D> {
     }
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct HandshakeState<E: Ecdh, D: Digest> {
     state: SymmetricState<D>,
     is_initiator: bool,
@@ -472,7 +472,7 @@ pub enum HandshakeAct {
     Split(CipherState, CipherState),
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NoiseState<E: Ecdh, D: Digest> {
     Handshake(HandshakeState<E, D>),
     Active {

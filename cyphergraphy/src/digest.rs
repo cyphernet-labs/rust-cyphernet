@@ -24,7 +24,7 @@ pub trait Digest: Sized {
     const OUTPUT_LEN: usize;
     const BLOCK_LEN: usize;
 
-    type Output: Copy + Eq + Sized + Send + AsRef<[u8]> + for<'a> TryFrom<&'a [u8]>;
+    type Output: Copy + Eq + Sized + Send + AsRef<[u8]> + for<'a> TryFrom<&'a [u8]> + Debug;
 
     fn new() -> Self;
     fn with_output_slice(slice: &[u8]) -> Option<Self> {
@@ -84,6 +84,9 @@ mod sha2 {
         }
     }
 }
+
+use std::fmt::Debug;
+
 #[cfg(feature = "sha2")]
 pub use ::sha2::Sha256;
 

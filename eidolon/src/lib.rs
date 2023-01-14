@@ -40,6 +40,7 @@ pub enum Error {
     Completed,
 }
 
+#[derive(Debug)]
 pub enum EidolonState<S: EcSig> {
     Initiator(Cert<S>, Vec<u8>),
     ResponderAwaits(Cert<S>, Vec<u8>),

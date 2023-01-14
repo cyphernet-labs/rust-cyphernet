@@ -31,6 +31,8 @@ pub mod x25519;
 #[cfg(feature = "ed25519")]
 pub mod ed25519;
 
+use std::fmt::Debug;
+
 pub use digest::*;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
@@ -106,7 +108,7 @@ pub enum EcVerifyError {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcPk: Clone + Eq {
+pub trait EcPk: Clone + Eq + Debug {
     const COMPRESSED_LEN: usize;
     const CURVE_NAME: &'static str;
 
@@ -134,7 +136,7 @@ pub trait EcSk {
 }
 
 /// Marker trait for elliptic-curve based signatures
-pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> {
+pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> + Debug {
     const COMPRESSED_LEN: usize;
 
     type Pk: EcPk;
@@ -171,6 +173,7 @@ pub trait EcSign: EcSk {
     fn sign(&self, msg: impl AsRef<[u8]>) -> Self::Sig;
 }
 
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Cert<S: EcSig> {
     pub pk: S::Pk,
     pub sig: S,
