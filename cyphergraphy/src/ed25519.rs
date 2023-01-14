@@ -30,11 +30,9 @@ use crate::{EcPk, EcPkInvalid, EcSig, EcSigInvalid, EcSign, EcSk, EcSkInvalid, E
 // ============================================================================
 // ed25519_compact keys
 
-impl MultiDisplay for ed25519_compact::PublicKey {
-    type Format = Encoding;
+impl MultiDisplay<Encoding> for ed25519_compact::PublicKey {
     type Display = String;
-
-    fn display_fmt(&self, f: &Self::Format) -> Self::Display { f.encode(self.as_slice()) }
+    fn display_fmt(&self, f: &Encoding) -> Self::Display { f.encode(self.as_slice()) }
 }
 
 impl EcPk for ed25519_compact::PublicKey {
@@ -121,10 +119,9 @@ impl EcPk for PublicKey {
     }
 }
 
-impl MultiDisplay for PublicKey {
-    type Format = Encoding;
+impl MultiDisplay<Encoding> for PublicKey {
     type Display = String;
-    fn display_fmt(&self, f: &Self::Format) -> Self::Display { self.0.display_fmt(f) }
+    fn display_fmt(&self, f: &Encoding) -> Self::Display { self.0.display_fmt(f) }
 }
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
@@ -162,10 +159,9 @@ impl EcSign for ed25519_compact::SecretKey {
     }
 }
 
-impl MultiDisplay for ed25519_compact::Signature {
-    type Format = Encoding;
+impl MultiDisplay<Encoding> for ed25519_compact::Signature {
     type Display = String;
-    fn display_fmt(&self, f: &Self::Format) -> Self::Display { f.encode(self.as_slice()) }
+    fn display_fmt(&self, f: &Encoding) -> Self::Display { f.encode(self.as_slice()) }
 }
 
 impl EcSig for ed25519_compact::Signature {
@@ -202,10 +198,9 @@ impl From<ed25519_compact::Signature> for Signature {
     fn from(other: ed25519_compact::Signature) -> Self { Self(other) }
 }
 
-impl MultiDisplay for Signature {
-    type Format = Encoding;
+impl MultiDisplay<Encoding> for Signature {
     type Display = String;
-    fn display_fmt(&self, f: &Self::Format) -> Self::Display { self.0.display_fmt(f) }
+    fn display_fmt(&self, f: &Encoding) -> Self::Display { self.0.display_fmt(f) }
 }
 
 impl EcSig for Signature {

@@ -112,7 +112,7 @@ pub enum EcVerifyError {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcPk: Clone + Eq + Debug + MultiDisplay {
+pub trait EcPk: Clone + Eq + Debug + MultiDisplay<Encoding> {
     const COMPRESSED_LEN: usize;
     const CURVE_NAME: &'static str;
 
@@ -140,7 +140,7 @@ pub trait EcSk {
 }
 
 /// Marker trait for elliptic-curve based signatures
-pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> + Debug + MultiDisplay {
+pub trait EcSig: Clone + Eq + Sized + Send + AsRef<[u8]> + Debug + MultiDisplay<Encoding> {
     const COMPRESSED_LEN: usize;
 
     type Pk: EcPk;

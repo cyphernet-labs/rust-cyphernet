@@ -88,13 +88,12 @@ impl Encoding {
     }
 }
 
-pub trait MultiDisplay {
-    type Format;
+pub trait MultiDisplay<F> {
     type Display: Display;
 
     fn display(&self) -> Self::Display
-    where Self::Format: Default {
+    where F: Default {
         self.display_fmt(&default!())
     }
-    fn display_fmt(&self, f: &Self::Format) -> Self::Display;
+    fn display_fmt(&self, f: &F) -> Self::Display;
 }
