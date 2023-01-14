@@ -177,10 +177,31 @@ pub trait EcSign: EcSk {
     fn sign(&self, msg: impl AsRef<[u8]>) -> Self::Sig;
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct CertFormat {
+    pub enc: Encoding,
+    pub sep: &'static str,
+}
+
+impl CertFormat {
+    pub fn new(sep: &'static str, enc: Encoding) -> Self { CertFormat { enc, sep } }
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Cert<S: EcSig> {
     pub pk: S::Pk,
     pub sig: S,
+}
+
+impl<S: EcSig> MultiDisplay<CertFormat> for Cert<S>
+where
+    S: MultiDisplay<Encoding>,
+    S::Pk: MultiDisplay<Encoding>,
+{
+    type Display = String;
+    fn display_fmt(&self, f: &CertFormat) -> Self::Display {
+        format!("{}{}{}", self.pk.display_fmt(&f.enc), f.sep, self.sig.display_fmt(&f.enc))
+    }
 }
 
 impl<S: EcSig> Cert<S> {

@@ -24,7 +24,6 @@
 use std::fmt::Display;
 
 use amplify::hex::ToHex;
-use bech32::ToBase32;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 #[non_exhaustive]
@@ -64,7 +63,7 @@ impl Encoding {
 
             #[cfg(feature = "bech32")]
             Encoding::Bech32(hrp, variant) => {
-                let b32 = data.to_base32();
+                let b32 = bech32::ToBase32::to_base32(&data);
                 bech32::encode(hrp, b32, *variant).expect("invalid HRP")
             }
 
