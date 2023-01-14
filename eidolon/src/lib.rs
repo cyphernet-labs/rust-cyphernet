@@ -42,6 +42,7 @@ pub enum Error {
 
 #[derive(Debug)]
 pub enum EidolonState<S: EcSig> {
+    Uninit(Cert<S>, bool),
     Initiator(Cert<S>, Vec<u8>),
     ResponderAwaits(Cert<S>, Vec<u8>),
     CredentialsSent,
@@ -51,12 +52,24 @@ pub enum EidolonState<S: EcSig> {
 impl<S: EcSig> EidolonState<S> {
     const MESSAGE_LEN: usize = S::Pk::COMPRESSED_LEN + S::COMPRESSED_LEN * 2;
 
-    pub fn initiator(creds: Cert<S>, nonce: Vec<u8>) -> Self { Self::Initiator(creds, nonce) }
+    pub fn initiator(creds: Cert<S>) -> Self { Self::Uninit(creds, true) }
 
-    pub fn responder(creds: Cert<S>, nonce: Vec<u8>) -> Self { Self::ResponderAwaits(creds, nonce) }
+    pub fn responder(creds: Cert<S>) -> Self { Self::Uninit(creds, false) }
+
+    pub fn init(&mut self, nonce: impl AsRef<[u8]>) {
+        let nonce = nonce.as_ref().to_vec();
+        *self = match self {
+            Self::Uninit(cert, true) => Self::Initiator(cert.clone(), nonce),
+            Self::Uninit(cert, false) => Self::ResponderAwaits(cert.clone(), nonce),
+            _ => panic!("repeated call to init method"),
+        };
+    }
+
+    pub fn is_init(&self) -> bool { !matches!(self, Self::Uninit(..)) }
 
     pub fn advance<P: EcSign>(&mut self, input: &[u8], signer: &P) -> Result<Vec<u8>, Error> {
         match self {
+            EidolonState::Uninit(_, _) => panic!("advancing uninitialized state machine"),
             EidolonState::Initiator(creds, nonce) => {
                 debug_assert!(input.is_empty());
                 let data = Self::serialize_creds(creds, nonce, signer);
