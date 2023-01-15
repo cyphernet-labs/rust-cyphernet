@@ -68,6 +68,13 @@ pub struct HandshakePattern {
 }
 
 impl HandshakePattern {
+    pub fn nn() -> Self {
+        Self {
+            initiator: InitiatorPattern::No,
+            responder: OneWayPattern::No,
+        }
+    }
+
     pub fn pre_messages(self) -> &'static [PreMsgKeyPat] {
         match (self.initiator, self.responder) {
             (InitiatorPattern::No, OneWayPattern::No) => &[PreMsgKeyPat::Empty],
