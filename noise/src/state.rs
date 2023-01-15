@@ -201,7 +201,7 @@ impl<D: Digest> SymmetricState<D> {
         Ok(plaintext)
     }
 
-    pub fn split(&self) -> (CipherState, CipherState) {
+    pub fn split(&mut self) -> (CipherState, CipherState) {
         // Sets temp_k1, temp_k2 = HKDF(ck, zerolen, 2).
         let (temp_k1, temp_k2) = hkdf_2::<D>(self.ck, &[]);
 
@@ -216,6 +216,8 @@ impl<D: Digest> SymmetricState<D> {
         // Calls c1.InitializeKey(temp_k1) and c2.InitializeKey(temp_k2).
         c1.initialize_key(k1);
         c2.initialize_key(k2);
+
+        self.was_split = true;
 
         // Returns the pair (c1, c2).
         (c1, c2)
