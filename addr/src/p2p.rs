@@ -49,11 +49,10 @@ where
     InvalidFormat,
 }
 
-#[derive(Getters, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[getter(as_copy)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct PeerAddr<Id: EcPk, A: Addr> {
-    id: Id,
-    addr: A,
+    pub id: Id,
+    pub addr: A,
 }
 
 impl<Id: EcPk, A: Addr> PeerAddr<Id, A> {
