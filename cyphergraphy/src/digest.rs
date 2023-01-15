@@ -19,7 +19,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub trait Digest: Sized {
+use std::fmt::Debug;
+
+pub trait Digest: Clone + Sized {
     const DIGEST_NAME: &'static str;
     const OUTPUT_LEN: usize;
     const BLOCK_LEN: usize;
@@ -85,11 +87,10 @@ mod sha2 {
     }
 }
 
-use std::fmt::Debug;
-
 #[cfg(feature = "sha2")]
 pub use ::sha2::Sha256;
 
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Hmac<D: Digest> {
     iengine: D,
     oengine: D,

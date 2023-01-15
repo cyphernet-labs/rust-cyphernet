@@ -131,7 +131,7 @@ pub trait EcPk: Clone + Eq + Debug + MultiDisplay<Encoding> {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcSk {
+pub trait EcSk: Clone + Eq {
     type Pk: EcPk;
 
     fn generate_keypair() -> (Self, Self::Pk)
