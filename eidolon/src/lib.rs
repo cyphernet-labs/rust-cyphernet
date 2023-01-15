@@ -50,7 +50,7 @@ pub enum EidolonState<S: EcSig> {
     Uninit(Cert<S>, Vec<S::Pk>, bool),
     Initiator(Cert<S>, Vec<S::Pk>, Vec<u8>),
     ResponderAwaits(Cert<S>, Vec<S::Pk>, Vec<u8>),
-    CredentialsSent(Vec<S::Pk>),
+    CredentialsSent(Vec<S::Pk>, Vec<u8>),
     Complete(Cert<S>),
 }
 
@@ -90,17 +90,17 @@ impl<S: EcSig> EidolonState<S> {
             EidolonState::Initiator(creds, allowed_ids, nonce) => {
                 debug_assert!(input.is_empty());
                 let data = Self::serialize_creds(creds, nonce, signer);
-                *self = EidolonState::CredentialsSent(allowed_ids.clone());
+                *self = EidolonState::CredentialsSent(allowed_ids.clone(), nonce.clone());
                 Ok(data)
             }
             EidolonState::ResponderAwaits(creds, allowed_ids, nonce) => {
-                let cert = Self::verify_input(input, allowed_ids)?;
+                let cert = Self::verify_input(input, nonce, allowed_ids)?;
                 let data = Self::serialize_creds(creds, nonce, signer);
                 *self = EidolonState::Complete(cert);
                 Ok(data)
             }
-            EidolonState::CredentialsSent(allowed_ids) => {
-                let cert = Self::verify_input(input, allowed_ids)?;
+            EidolonState::CredentialsSent(allowed_ids, nonce) => {
+                let cert = Self::verify_input(input, nonce, allowed_ids)?;
                 *self = EidolonState::Complete(cert);
                 Ok(vec![])
             }
@@ -122,14 +122,18 @@ impl<S: EcSig> EidolonState<S> {
         match self {
             EidolonState::Uninit(_, _, _) => 0,
             EidolonState::Initiator(_, _, _) => 0,
-            EidolonState::ResponderAwaits(_, _, _) | EidolonState::CredentialsSent(_) => {
+            EidolonState::ResponderAwaits(_, _, _) | EidolonState::CredentialsSent(_, _) => {
                 S::Pk::COMPRESSED_LEN + 2 * S::COMPRESSED_LEN
             }
             EidolonState::Complete(_) => 0,
         }
     }
 
-    fn verify_input(input: &[u8], allowed_ids: &[S::Pk]) -> Result<Cert<S>, Error<S::Pk>> {
+    fn verify_input(
+        input: &[u8],
+        nonce: &[u8],
+        allowed_ids: &[S::Pk],
+    ) -> Result<Cert<S>, Error<S::Pk>> {
         if input.len() != Self::MESSAGE_LEN {
             return Err(Error::InvalidLen(input.len()));
         }
@@ -143,7 +147,7 @@ impl<S: EcSig> EidolonState<S> {
         let sig_nonce = S::from_sig_compressed_slice(sig_nonce).expect("fixed length");
 
         sig.verify(&pk, pk.to_pk_compressed()).map_err(|_| Error::InvalidCert)?;
-        sig_nonce.verify(&pk, pk.to_pk_compressed()).map_err(|_| Error::SigMismatch)?;
+        sig_nonce.verify(&pk, nonce).map_err(|_| Error::SigMismatch)?;
 
         if !allowed_ids.is_empty() {
             for id in allowed_ids {
