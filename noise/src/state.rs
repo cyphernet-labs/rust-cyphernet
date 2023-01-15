@@ -412,8 +412,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                             debug_assert!(self.keyset.re.is_none());
 
                             let next_pos = pos + E::Pk::COMPRESSED_LEN;
-                            let re =
-                                E::Pk::from_pk_compressed_slice(&payload_buffer[pos..next_pos])?;
+                            let re = E::Pk::from_pk_compressed_slice(&message[pos..next_pos])?;
                             pos = next_pos;
 
                             self.state.mix_hash(&re.to_pk_compressed());
@@ -425,8 +424,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                                 true => D::OUTPUT_LEN + 16,
                                 false => D::OUTPUT_LEN,
                             };
-                            let temp =
-                                self.state.decrypt_and_hash(&payload_buffer[pos..next_pos])?;
+                            let temp = self.state.decrypt_and_hash(&message[pos..next_pos])?;
                             self.keyset.rs = Some(E::Pk::from_pk_compressed_slice(&temp)?);
                             pos = next_pos;
                         }
