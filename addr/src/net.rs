@@ -26,7 +26,7 @@ use std::{fmt, io, vec};
 
 #[cfg(feature = "dns")]
 use crate::InetHost;
-use crate::{Addr, AddrParseError, Host, Localhost, ToSocketAddr};
+use crate::{Addr, AddrParseError, Host, HostName, Localhost, ToSocketAddr};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -112,6 +112,17 @@ where H: From<Ipv6Addr>
         NetAddr {
             host: H::from(*socket_addr.ip()),
             port: socket_addr.port(),
+        }
+    }
+}
+
+impl NetAddr<HostName> {
+    pub fn connection_addr(&self, proxy_addr: NetAddr<InetHost>) -> NetAddr<InetHost> {
+        match &self.host {
+            HostName::Ip(ip) => NetAddr::new(InetHost::Ip(*ip), self.port),
+            #[cfg(feature = "dns")]
+            HostName::Dns(domain) => NetAddr::new(InetHost::Dns(domain.clone()), self.port),
+            _ => proxy_addr,
         }
     }
 }
