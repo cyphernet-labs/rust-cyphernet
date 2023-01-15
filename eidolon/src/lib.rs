@@ -22,11 +22,13 @@
 #[macro_use]
 extern crate amplify;
 
+use std::fmt::Debug;
+
 use cypher::{Cert, EcPk, EcSig, EcSign};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[display(doc_comments)]
-pub enum Error {
+pub enum Error<Id: EcPk> {
     /// authorization message has invalid length {0}
     InvalidLen(usize),
 
@@ -36,54 +38,69 @@ pub enum Error {
     /// the provided credentials has invalid nonce signature
     SigMismatch,
 
+    /// remote id {0:?} is not authorized
+    Unauthorized(Id),
+
     /// authentication is complete and cant advance anymore
     Completed,
 }
 
 #[derive(Debug)]
 pub enum EidolonState<S: EcSig> {
-    Uninit(Cert<S>, bool),
-    Initiator(Cert<S>, Vec<u8>),
-    ResponderAwaits(Cert<S>, Vec<u8>),
-    CredentialsSent,
+    Uninit(Cert<S>, Vec<S::Pk>, bool),
+    Initiator(Cert<S>, Vec<S::Pk>, Vec<u8>),
+    ResponderAwaits(Cert<S>, Vec<S::Pk>, Vec<u8>),
+    CredentialsSent(Vec<S::Pk>),
     Complete(Cert<S>),
 }
 
 impl<S: EcSig> EidolonState<S> {
     const MESSAGE_LEN: usize = S::Pk::COMPRESSED_LEN + S::COMPRESSED_LEN * 2;
 
-    pub fn initiator(creds: Cert<S>) -> Self { Self::Uninit(creds, true) }
+    pub fn initiator(creds: Cert<S>, allowed_ids: Vec<S::Pk>) -> Self {
+        Self::Uninit(creds, allowed_ids, true)
+    }
 
-    pub fn responder(creds: Cert<S>) -> Self { Self::Uninit(creds, false) }
+    pub fn responder(creds: Cert<S>, allowed_ids: Vec<S::Pk>) -> Self {
+        Self::Uninit(creds, allowed_ids, false)
+    }
 
     pub fn init(&mut self, nonce: impl AsRef<[u8]>) {
         let nonce = nonce.as_ref().to_vec();
         *self = match self {
-            Self::Uninit(cert, true) => Self::Initiator(cert.clone(), nonce),
-            Self::Uninit(cert, false) => Self::ResponderAwaits(cert.clone(), nonce),
+            Self::Uninit(cert, allowed_ids, true) => {
+                Self::Initiator(cert.clone(), allowed_ids.clone(), nonce)
+            }
+            Self::Uninit(cert, allowed_ids, false) => {
+                Self::ResponderAwaits(cert.clone(), allowed_ids.clone(), nonce)
+            }
             _ => panic!("repeated call to init method"),
         };
     }
 
     pub fn is_init(&self) -> bool { !matches!(self, Self::Uninit(..)) }
 
-    pub fn advance<P: EcSign>(&mut self, input: &[u8], signer: &P) -> Result<Vec<u8>, Error> {
+    pub fn advance<P: EcSign>(
+        &mut self,
+        input: &[u8],
+        signer: &P,
+    ) -> Result<Vec<u8>, Error<S::Pk>> {
         match self {
-            EidolonState::Uninit(_, _) => panic!("advancing uninitialized state machine"),
-            EidolonState::Initiator(creds, nonce) => {
+            EidolonState::Uninit(_, _, _) => panic!("advancing uninitialized state machine"),
+            EidolonState::Initiator(creds, allowed_ids, nonce) => {
                 debug_assert!(input.is_empty());
                 let data = Self::serialize_creds(creds, nonce, signer);
-                *self = EidolonState::CredentialsSent;
+                *self = EidolonState::CredentialsSent(allowed_ids.clone());
                 Ok(data)
             }
-            EidolonState::ResponderAwaits(creds, nonce) => {
-                let cert = Self::verify_input(input)?;
+            EidolonState::ResponderAwaits(creds, allowed_ids, nonce) => {
+                let cert = Self::verify_input(input, allowed_ids)?;
                 let data = Self::serialize_creds(creds, nonce, signer);
                 *self = EidolonState::Complete(cert);
                 Ok(data)
             }
-            EidolonState::CredentialsSent => {
-                let cert = Self::verify_input(input)?;
+            EidolonState::CredentialsSent(allowed_ids) => {
+                let cert = Self::verify_input(input, allowed_ids)?;
                 *self = EidolonState::Complete(cert);
                 Ok(vec![])
             }
@@ -103,16 +120,16 @@ impl<S: EcSig> EidolonState<S> {
 
     pub fn next_read_len(&self) -> usize {
         match self {
-            EidolonState::Uninit(_, _) => 0,
-            EidolonState::Initiator(_, _) => 0,
-            EidolonState::ResponderAwaits(_, _) | EidolonState::CredentialsSent => {
+            EidolonState::Uninit(_, _, _) => 0,
+            EidolonState::Initiator(_, _, _) => 0,
+            EidolonState::ResponderAwaits(_, _, _) | EidolonState::CredentialsSent(_) => {
                 S::Pk::COMPRESSED_LEN + 2 * S::COMPRESSED_LEN
             }
             EidolonState::Complete(_) => 0,
         }
     }
 
-    fn verify_input(input: &[u8]) -> Result<Cert<S>, Error> {
+    fn verify_input(input: &[u8], allowed_ids: &[S::Pk]) -> Result<Cert<S>, Error<S::Pk>> {
         if input.len() != Self::MESSAGE_LEN {
             return Err(Error::InvalidLen(input.len()));
         }
@@ -128,7 +145,17 @@ impl<S: EcSig> EidolonState<S> {
         sig.verify(&pk, pk.to_pk_compressed()).map_err(|_| Error::InvalidCert)?;
         sig_nonce.verify(&pk, pk.to_pk_compressed()).map_err(|_| Error::SigMismatch)?;
 
-        Ok(Cert { pk, sig })
+        if !allowed_ids.is_empty() {
+            for id in allowed_ids {
+                if id == &pk {
+                    return Ok(Cert { pk, sig });
+                }
+            }
+        } else {
+            return Ok(Cert { pk, sig });
+        }
+
+        Err(Error::Unauthorized(pk))
     }
 
     fn serialize_creds<P: EcSign>(creds: &Cert<S>, nonce: &[u8], signer: &P) -> Vec<u8> {
