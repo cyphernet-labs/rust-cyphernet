@@ -41,18 +41,16 @@ fn _cypher(key: &[u8]) -> ChaCha20Poly1305 {
 ///
 /// # Returns
 ///
-/// Returns the encrypted msg, which is also copied to ciphertext array, if
-/// provided.
-///
-/// # Panics
-///
-/// Function panics if `plaintext` and `cyphertext` have different length.
+/// Returns the encrypted msg.
 pub(crate) fn encrypt(
     key: SharedSecret,
     nonce: NoiseNonce,
     associated_data: &[u8],
     plaintext: &[u8],
 ) -> Result<Vec<u8>, EncryptionError> {
+    if plaintext.is_empty() {
+        return Ok(vec![]);
+    }
     let payload = Payload {
         msg: plaintext,
         aad: associated_data,
@@ -64,18 +62,16 @@ pub(crate) fn encrypt(
 ///
 /// # Returns
 ///
-/// Returns the decrypted msg, which is also copied to plaintext array, if
-/// provided.
-///
-/// # Panics
-///
-/// Function panics if `plaintext` and `cyphertext` have different length.
+/// Returns the decrypted msg.
 pub(crate) fn decrypt(
     key: SharedSecret,
     nonce: NoiseNonce,
     associated_data: &[u8],
     ciphertext: &[u8],
 ) -> Result<Vec<u8>, EncryptionError> {
+    if ciphertext.is_empty() {
+        return Ok(vec![]);
+    }
     let payload = Payload {
         msg: ciphertext,
         aad: associated_data,
