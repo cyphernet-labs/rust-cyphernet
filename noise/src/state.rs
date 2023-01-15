@@ -273,7 +273,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
         debug_assert_eq!(HASHLEN, D::OUTPUT_LEN);
         let mut name_components = vec![s!("Noise")];
         let curve_name = match E::Pk::CURVE_NAME {
-            "Edward25519" => "25519",
+            "Curve25519" => "25519",
             "Secp356k1" => "secp256k1",
             unsupported => {
                 unimplemented!("curve {unsupported} is not supported by the Noise library")

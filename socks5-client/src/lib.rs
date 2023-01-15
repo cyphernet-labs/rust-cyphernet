@@ -37,7 +37,6 @@ use cypheraddr::{Host, HostName, NetAddr};
 pub use error::ServerError;
 
 use crate::encoding::{Encoding, EncodingError, DOMAIN, IPV4, IPV6};
-use crate::Socks5::Active;
 
 #[derive(Debug, Display, Error, From)]
 #[display(inner)]
@@ -82,7 +81,7 @@ impl Socks5 {
     pub fn advance(&mut self, input: &[u8]) -> Result<Vec<u8>, Error> {
         match self {
             Socks5::Initial(addr, false) if !addr.requires_proxy() => {
-                *self = Active(addr.clone());
+                *self = Socks5::Active(addr.clone());
                 Ok(vec![])
             }
             Socks5::Initial(addr, _) => {
