@@ -187,7 +187,7 @@ impl CertFormat {
     pub fn new(sep: &'static str, enc: Encoding) -> Self { CertFormat { enc, sep } }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Cert<S: EcSig> {
     pub pk: S::Pk,
     pub sig: S,
