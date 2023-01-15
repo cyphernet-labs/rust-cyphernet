@@ -336,10 +336,10 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                     match pat {
                         MessagePattern::E => {
                             let (e, pubkey) = E::generate_keypair();
-                            message_buffer.extend(pubkey.to_pk_compressed().as_ref());
+                            let pk = pubkey.to_pk_compressed();
+                            message_buffer.extend(pk.as_ref());
 
-                            let re = self.keyset.expect_re();
-                            self.state.mix_key(e.ecdh(&re)?);
+                            self.state.mix_key(&pk);
                             self.keyset.e = e;
                         }
                         MessagePattern::S => message_buffer
