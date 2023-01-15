@@ -64,7 +64,9 @@ impl<Id: EcPk, A: Addr> Borrow<Id> for PeerAddr<Id, A> {
     fn borrow(&self) -> &Id { &self.id }
 }
 
-impl<Id: EcPk, A: Addr> Host for PeerAddr<Id, A> {}
+impl<Id: EcPk, A: Addr> Host for PeerAddr<Id, A> {
+    fn requires_proxy(&self) -> bool { self.addr.requires_proxy() }
+}
 
 impl<Id: EcPk, A: Addr> Addr for PeerAddr<Id, A> {
     fn port(&self) -> u16 { self.addr.port() }

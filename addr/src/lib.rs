@@ -73,19 +73,33 @@ pub use p2p::{PeerAddr, PeerAddrParseError};
 pub use proxied::{ProxiedAddr, ProxiedHost};
 
 /// Marker trait for all types of host names.
-pub trait Host {}
+pub trait Host {
+    fn requires_proxy(&self) -> bool;
+}
 
-impl Host for std::net::IpAddr {}
+impl Host for std::net::IpAddr {
+    fn requires_proxy(&self) -> bool { false }
+}
 
-impl Host for std::net::Ipv4Addr {}
+impl Host for std::net::Ipv4Addr {
+    fn requires_proxy(&self) -> bool { false }
+}
 
-impl Host for std::net::Ipv6Addr {}
+impl Host for std::net::Ipv6Addr {
+    fn requires_proxy(&self) -> bool { false }
+}
 
-impl Host for std::net::SocketAddr {}
+impl Host for std::net::SocketAddr {
+    fn requires_proxy(&self) -> bool { false }
+}
 
-impl Host for std::net::SocketAddrV4 {}
+impl Host for std::net::SocketAddrV4 {
+    fn requires_proxy(&self) -> bool { false }
+}
 
-impl Host for std::net::SocketAddrV6 {}
+impl Host for std::net::SocketAddrV6 {
+    fn requires_proxy(&self) -> bool { false }
+}
 
 /// Trait for address types which can represent a localhost address.
 pub trait Localhost: Host {

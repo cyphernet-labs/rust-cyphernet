@@ -64,7 +64,14 @@ pub enum ProxiedHost<P: ToSocketAddrs + Addr = DefaultAddr> {
     Nym(super::nym::NymAddr, P),
 }
 
-impl<P: ToSocketAddrs + Addr> Host for ProxiedHost<P> {}
+impl<P: ToSocketAddrs + Addr> Host for ProxiedHost<P> {
+    fn requires_proxy(&self) -> bool {
+        match self {
+            ProxiedHost::Native(_) => false,
+            _ => true,
+        }
+    }
+}
 
 impl<P: ToSocketAddrs + Addr> ProxiedHost<P> {
     pub fn with_proxy(host: HostName, proxy: P) -> Self {
@@ -111,7 +118,9 @@ pub struct ProxiedAddr<A: Addr = NetAddr<HostName>> {
     pub remote_addr: A,
 }
 
-impl<A: Addr> Host for ProxiedAddr<A> {}
+impl<A: Addr> Host for ProxiedAddr<A> {
+    fn requires_proxy(&self) -> bool { self.remote_addr.requires_proxy() }
+}
 
 impl<A: Addr> Addr for ProxiedAddr<A> {
     fn port(&self) -> u16 { self.remote_addr.port() }

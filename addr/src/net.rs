@@ -48,7 +48,9 @@ impl<H: Localhost> NetAddr<H> {
     }
 }
 
-impl<H: Host> Host for NetAddr<H> {}
+impl<H: Host> Host for NetAddr<H> {
+    fn requires_proxy(&self) -> bool { self.host.requires_proxy() }
+}
 
 impl<H: Host> Addr for NetAddr<H> {
     fn port(&self) -> u16 { self.port }
@@ -165,7 +167,9 @@ impl<H: Localhost, const DEFAULT_PORT: u16> PartialAddr<H, DEFAULT_PORT> {
     }
 }
 
-impl<H: Host, const DEFAULT_PORT: u16> Host for PartialAddr<H, DEFAULT_PORT> {}
+impl<H: Host, const DEFAULT_PORT: u16> Host for PartialAddr<H, DEFAULT_PORT> {
+    fn requires_proxy(&self) -> bool { self.host.requires_proxy() }
+}
 
 impl<H: Host, const DEFAULT_PORT: u16> Localhost for PartialAddr<H, DEFAULT_PORT>
 where H: Localhost

@@ -43,7 +43,9 @@ pub enum InetHost {
 }
 
 #[cfg(feature = "dns")]
-impl Host for InetHost {}
+impl Host for InetHost {
+    fn requires_proxy(&self) -> bool { false }
+}
 
 #[cfg(feature = "dns")]
 impl Localhost for InetHost {
@@ -93,7 +95,16 @@ pub enum HostName {
     Nym(super::nym::NymAddr),
 }
 
-impl Host for HostName {}
+impl Host for HostName {
+    fn requires_proxy(&self) -> bool {
+        match self {
+            HostName::Ip(_) => false,
+            #[cfg(feature = "dns")]
+            HostName::Dns(_) => false,
+            _ => true,
+        }
+    }
+}
 
 impl Localhost for HostName {
     fn localhost() -> Self { Self::Ip(Localhost::localhost()) }
