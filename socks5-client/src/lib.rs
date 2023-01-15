@@ -33,10 +33,11 @@ mod error;
 
 use std::io;
 
-use cypheraddr::{HostName, InetHost, NetAddr};
+use cypheraddr::{Host, HostName, NetAddr};
 pub use error::ServerError;
 
 use crate::encoding::{Encoding, EncodingError, DOMAIN, IPV4, IPV6};
+use crate::Socks5::Active;
 
 #[derive(Debug, Display, Error, From)]
 #[display(inner)]
@@ -64,7 +65,7 @@ pub enum Error {
 
 #[derive(Debug)]
 pub enum Socks5 {
-    Initial(NetAddr<HostName>),
+    Initial(NetAddr<HostName>, bool),
     Connected(NetAddr<HostName>),
     Awaiting,
     Reading(u8, u8),
@@ -74,11 +75,17 @@ pub enum Socks5 {
 }
 
 impl Socks5 {
-    pub fn with(addr: impl Into<NetAddr<HostName>>) -> Self { Self::Initial(addr.into()) }
+    pub fn with(addr: impl Into<NetAddr<HostName>>, force_proxy: bool) -> Self {
+        Self::Initial(addr.into(), force_proxy)
+    }
 
     pub fn advance(&mut self, input: &[u8]) -> Result<Vec<u8>, Error> {
         match self {
-            Socks5::Initial(addr) => {
+            Socks5::Initial(addr, false) if !addr.requires_proxy() => {
+                *self = Active(addr.clone());
+                Ok(vec![])
+            }
+            Socks5::Initial(addr, _) => {
                 debug_assert!(input.is_empty());
                 let out = vec![0x05, 0x01, 0x00];
                 *self = Socks5::Connected(addr.clone());
@@ -129,7 +136,7 @@ impl Socks5 {
 
     pub fn next_read_len(&self) -> usize {
         match self {
-            Socks5::Initial(_) => 0,
+            Socks5::Initial(_, _) => 0,
             Socks5::Connected(_) => 2,
             Socks5::Awaiting => 3,
             Socks5::Reading(ty, _) if *ty == IPV4 => 4,
