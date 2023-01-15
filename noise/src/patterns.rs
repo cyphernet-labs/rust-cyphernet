@@ -191,6 +191,16 @@ pub struct Keyset<E: Ecdh> {
 }
 
 impl<E: Ecdh> Keyset<E> {
+    pub fn noise_nn() -> Self {
+        let pair = E::generate_keypair();
+        Self {
+            e: pair.0,
+            s: None,
+            re: None,
+            rs: None,
+        }
+    }
+
     pub fn pre_message_key(&self, pmkp: PreMsgKeyPat, is_initiator: bool) -> Option<E::Pk> {
         Some(match (pmkp, is_initiator) {
             (PreMsgKeyPat::InitiatorStatic, true) | (PreMsgKeyPat::ResponderStatic, false) => {

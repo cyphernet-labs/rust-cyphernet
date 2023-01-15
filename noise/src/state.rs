@@ -513,6 +513,22 @@ pub enum NoiseState<E: Ecdh, D: Digest> {
 }
 
 impl<E: Ecdh, D: Digest> NoiseState<E, D> {
+    pub fn initialize<const HASHLEN: usize>(
+        handshake_pattern: HandshakePattern,
+        is_initiator: bool,
+        prologue: &[u8],
+        keyset: Keyset<E>,
+    ) -> Self {
+        debug_assert_eq!(HASHLEN, D::OUTPUT_LEN);
+
+        Self::Handshake(HandshakeState::initialize::<HASHLEN>(
+            handshake_pattern,
+            is_initiator,
+            prologue,
+            keyset,
+        ))
+    }
+
     /// Takes incoming data from the remote peer, advances internal state machine
     /// and returns a data to be sent to the remote peer for the next handshake
     /// act. If the handshake is over, returns an empty vector. On subsequent
