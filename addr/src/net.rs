@@ -116,6 +116,10 @@ where H: From<Ipv6Addr>
     }
 }
 
+impl From<NetAddr<InetHost>> for NetAddr<HostName> {
+    fn from(addr: NetAddr<InetHost>) -> Self { NetAddr::new(addr.host.into(), addr.port) }
+}
+
 impl NetAddr<HostName> {
     pub fn connection_addr(&self, proxy_addr: NetAddr<InetHost>) -> NetAddr<InetHost> {
         match &self.host {
