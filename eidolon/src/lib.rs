@@ -101,6 +101,17 @@ impl<S: EcSig> EidolonState<S> {
         }
     }
 
+    pub fn next_read_len(&self) -> usize {
+        match self {
+            EidolonState::Uninit(_, _) => 0,
+            EidolonState::Initiator(_, _) => 0,
+            EidolonState::ResponderAwaits(_, _) | EidolonState::CredentialsSent => {
+                S::Pk::COMPRESSED_LEN + 2 * S::COMPRESSED_LEN
+            }
+            EidolonState::Complete(_) => 0,
+        }
+    }
+
     fn verify_input(input: &[u8]) -> Result<Cert<S>, Error> {
         if input.len() != Self::MESSAGE_LEN {
             return Err(Error::InvalidLen(input.len()));
