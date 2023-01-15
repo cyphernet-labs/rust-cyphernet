@@ -341,11 +341,14 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                             let pk = pubkey.to_pk_compressed();
                             message_buffer.extend(pk.as_ref());
 
-                            self.state.mix_key(&pk);
+                            self.state.mix_hash(&pk);
                             self.keyset.e = e;
                         }
-                        MessagePattern::S => message_buffer
-                            .extend(self.keyset.expect_s().to_pk()?.to_pk_compressed().as_ref()),
+                        MessagePattern::S => {
+                            let s = self.keyset.expect_s().to_pk()?.to_pk_compressed();
+                            let enc = self.state.encrypt_and_hash(&s)?;
+                            message_buffer.extend(&enc)
+                        }
                         MessagePattern::EE => {
                             self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_re())?)
                         }
