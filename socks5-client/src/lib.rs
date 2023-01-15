@@ -33,7 +33,7 @@ mod error;
 
 use std::io;
 
-use cypheraddr::{HostName, NetAddr};
+use cypheraddr::{HostName, InetHost, NetAddr};
 pub use error::ServerError;
 
 use crate::encoding::{Encoding, EncodingError, DOMAIN, IPV4, IPV6};

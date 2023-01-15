@@ -28,7 +28,7 @@ mod cipher;
 mod hkdf;
 mod state;
 
-pub use patterns::{HandshakePattern, InitiatorPattern, OneWayPattern};
+pub use patterns::{HandshakePattern, InitiatorPattern, Keyset, OneWayPattern};
 pub use state::{CipherState, NoiseState};
 
 pub type SymmetricKey = [u8; 32];
