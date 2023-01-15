@@ -503,6 +503,7 @@ pub enum HandshakeAct {
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum NoiseState<E: Ecdh, D: Digest> {
+    AwaitWrite(HandshakeState<E, D>),
     Handshake(HandshakeState<E, D>),
     Active {
         sending_cipher: CipherState,
@@ -521,12 +522,16 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
     ) -> Self {
         debug_assert_eq!(HASHLEN, D::OUTPUT_LEN);
 
-        Self::Handshake(HandshakeState::initialize::<HASHLEN>(
+        let handshake = HandshakeState::initialize::<HASHLEN>(
             handshake_pattern,
             is_initiator,
             prologue,
             keyset,
-        ))
+        );
+        match is_initiator {
+            true => Self::AwaitWrite(handshake),
+            false => Self::Handshake(handshake),
+        }
     }
 
     /// Takes incoming data from the remote peer, advances internal state machine
@@ -548,6 +553,16 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
         payload: &[u8],
     ) -> Result<(Vec<u8>, Vec<u8>), NoiseError> {
         match self {
+            NoiseState::AwaitWrite(handshake) => {
+                let act = handshake.write_message(payload)?;
+                match act {
+                    HandshakeAct::Buffer(buffer) => {
+                        *self = NoiseState::Handshake(handshake.clone());
+                        Ok((buffer, vec![]))
+                    }
+                    _ => panic!("single-act handshake doesn't exist for noise protocol"),
+                }
+            }
             NoiseState::Handshake(handshake) => {
                 let act = handshake.read_message(input)?;
                 let read_payload = match act {
@@ -583,6 +598,7 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
     /// Provides information about next message length which should be read from a network stream.
     pub fn next_read_len(&self) -> usize {
         match self {
+            NoiseState::AwaitWrite(_) => 0,
             NoiseState::Handshake(handshake) => handshake.next_read_len(),
             NoiseState::Active { .. } => 0,
         }
@@ -590,7 +606,7 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
 
     pub fn get_handshake_hash(&self) -> Option<HandshakeHash<D>> {
         match self {
-            NoiseState::Handshake(_) => None,
+            NoiseState::AwaitWrite(_) | NoiseState::Handshake(_) => None,
             NoiseState::Active { handshake_hash, .. } => Some(*handshake_hash),
         }
     }
