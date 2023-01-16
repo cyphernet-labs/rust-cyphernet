@@ -166,8 +166,7 @@ impl Encoding for HostName {
                 let len = u8::decode(reader)?;
                 let mut domain = vec![0; len as usize];
                 reader.read_exact(&mut domain)?;
-                let domain =
-                    String::from_utf8(domain).map_err(|e| EncodingError::InvalidDomainName(e))?;
+                let domain = String::from_utf8(domain).map_err(EncodingError::InvalidDomainName)?;
                 HostName::from_str(&domain).map_err(EncodingError::from)
             }
             unknown => Err(EncodingError::UnknownHostCode(unknown)),

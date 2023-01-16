@@ -90,5 +90,5 @@ pub(crate) fn rekey(k: SharedSecret) -> SharedSecret {
     let key = encrypt(k, u64::MAX, &[], &[0u8; 32]).expect("error re-keying");
     let mut buf = [0u8; 32];
     buf.copy_from_slice(&key);
-    SharedSecret::from(buf)
+    buf
 }

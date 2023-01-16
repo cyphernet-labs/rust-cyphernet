@@ -34,7 +34,7 @@ pub trait Digest: Clone + Sized {
             return None;
         }
         let mut buf = [0u8; 32];
-        buf.copy_from_slice(&slice);
+        buf.copy_from_slice(slice);
         todo!()
     }
 
@@ -106,10 +106,10 @@ impl<D: Digest> Hmac<D> {
         let key = key.as_ref();
         if key.len() > D::BLOCK_LEN {
             let hash = D::digest(key);
-            for (b_i, b_h) in ipad.iter_mut().zip(&hash.as_ref()[..]) {
+            for (b_i, b_h) in ipad.iter_mut().zip(hash.as_ref()) {
                 *b_i ^= *b_h;
             }
-            for (b_o, b_h) in opad.iter_mut().zip(&hash.as_ref()[..]) {
+            for (b_o, b_h) in opad.iter_mut().zip(hash.as_ref()) {
                 *b_o ^= *b_h;
             }
         } else {
@@ -134,13 +134,13 @@ impl<D: Digest> Digest for Hmac<D> {
     const BLOCK_LEN: usize = D::BLOCK_LEN;
     type Output = D::Output;
 
-    fn new() -> Self { Self::keyed(&[]) }
+    fn new() -> Self { Self::keyed([]) }
 
     fn input(&mut self, data: impl AsRef<[u8]>) { self.iengine.input(data); }
 
     fn finalize(mut self) -> Self::Output {
         let ihash = self.iengine.finalize();
-        self.oengine.input(&ihash.as_ref()[..]);
+        self.oengine.input(ihash.as_ref());
         self.oengine.finalize()
     }
 }

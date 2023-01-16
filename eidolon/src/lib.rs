@@ -165,7 +165,7 @@ impl<S: EcSig> EidolonState<S> {
     }
 
     fn serialize_creds<P: EcSign>(creds: &Cert<S>, nonce: &[u8], signer: &P) -> Vec<u8> {
-        let sig = signer.sign(&nonce);
+        let sig = signer.sign(nonce);
         let mut data = Vec::with_capacity(S::Pk::COMPRESSED_LEN + S::COMPRESSED_LEN * 2);
         data.extend_from_slice(creds.pk.to_pk_compressed().as_ref());
         data.extend_from_slice(creds.sig.to_sig_compressed().as_ref());

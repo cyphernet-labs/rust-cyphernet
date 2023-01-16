@@ -154,9 +154,7 @@ impl EcSk for PrivateKey {
 impl EcSign for ed25519_compact::SecretKey {
     type Sig = ed25519_compact::Signature;
 
-    fn sign(&self, msg: impl AsRef<[u8]>) -> ed25519_compact::Signature {
-        self.sign(msg, None).into()
-    }
+    fn sign(&self, msg: impl AsRef<[u8]>) -> ed25519_compact::Signature { self.sign(msg, None) }
 }
 
 impl MultiDisplay<Encoding> for ed25519_compact::Signature {

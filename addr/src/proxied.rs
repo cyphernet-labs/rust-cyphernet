@@ -65,12 +65,7 @@ pub enum ProxiedHost<P: ToSocketAddrs + Addr = DefaultAddr> {
 }
 
 impl<P: ToSocketAddrs + Addr> Host for ProxiedHost<P> {
-    fn requires_proxy(&self) -> bool {
-        match self {
-            ProxiedHost::Native(_) => false,
-            _ => true,
-        }
-    }
+    fn requires_proxy(&self) -> bool { !matches!(self, ProxiedHost::Native(_)) }
 }
 
 impl<P: ToSocketAddrs + Addr> ProxiedHost<P> {

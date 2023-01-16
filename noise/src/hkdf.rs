@@ -37,10 +37,10 @@ fn hmac_hash<D: Digest>(
     let key = key.as_ref();
     if key.len() > D::BLOCK_LEN {
         let hash = D::digest(key);
-        for (b_i, b_h) in ipad.iter_mut().zip(&hash.as_ref()[..]) {
+        for (b_i, b_h) in ipad.iter_mut().zip(hash.as_ref()) {
             *b_i ^= *b_h;
         }
-        for (b_o, b_h) in opad.iter_mut().zip(&hash.as_ref()[..]) {
+        for (b_o, b_h) in opad.iter_mut().zip(hash.as_ref()) {
             *b_o ^= *b_h;
         }
     } else {
@@ -60,9 +60,8 @@ fn hmac_hash<D: Digest>(
     }
 
     let ihash = iengine.finalize();
-    oengine.input(&ihash.as_ref()[..]);
-    let ohash = oengine.finalize();
-    ohash
+    oengine.input(ihash.as_ref());
+    oengine.finalize()
 }
 
 fn _hkdf<D: Digest>(
@@ -76,7 +75,7 @@ fn _hkdf<D: Digest>(
     let output1 = hmac_hash::<D>(temp_key.as_ref(), [&[1]]);
 
     // Sets output2 = HMAC-HASH(temp_key, output1 || byte(0x02)).
-    let output2 = hmac_hash::<D>(temp_key.as_ref(), [&output1.as_ref()[..], &[2][..]]);
+    let output2 = hmac_hash::<D>(temp_key.as_ref(), [output1.as_ref(), &[2][..]]);
 
     (temp_key, output1, output2)
 }
@@ -97,7 +96,7 @@ pub(crate) fn hkdf_3<D: Digest>(
 ) -> (D::Output, D::Output, D::Output) {
     let (temp_key, output1, output2) = _hkdf::<D>(chaining_key, input_material);
     // Sets output3 = HMAC-HASH(temp_key, output2 || byte(0x03)).
-    let output3 = hmac_hash::<D>(temp_key, [&output2.as_ref()[..], &[3][..]]);
+    let output3 = hmac_hash::<D>(temp_key, [output2.as_ref(), &[3][..]]);
 
     (output1, output3, output2)
 }

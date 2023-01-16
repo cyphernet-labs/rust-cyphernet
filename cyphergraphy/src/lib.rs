@@ -208,7 +208,7 @@ where
 
 impl<S: EcSig> Cert<S> {
     pub fn verify(&self) -> Result<(), EcVerifyError> {
-        self.sig.verify(&self.pk, &self.pk.to_pk_compressed())
+        self.sig.verify(&self.pk, self.pk.to_pk_compressed())
     }
 }
 

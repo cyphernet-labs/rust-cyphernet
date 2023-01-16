@@ -50,11 +50,11 @@ impl WithTruncated for SharedSecret {
                 )
             }
         }
-        SharedSecret::from(key)
+        key
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct CipherState {
     k: SharedSecret,
     n: NoiseNonce,
@@ -197,7 +197,7 @@ impl<D: Digest> SymmetricState<D> {
 
     pub fn split(&mut self) -> (CipherState, CipherState) {
         // Sets temp_k1, temp_k2 = HKDF(ck, zerolen, 2).
-        let (temp_k1, temp_k2) = hkdf_2::<D>(self.ck, &[]);
+        let (temp_k1, temp_k2) = hkdf_2::<D>(self.ck, []);
 
         // If HASHLEN is 64, then truncates temp_k1 and temp_k2 to 32 bytes.
         let k1 = SharedSecret::with_truncated(temp_k1);
@@ -290,12 +290,10 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
             }
         }
 
-        let write_message_patterns = VecDeque::from_iter(
-            handshake_pattern.message_patterns(is_initiator).into_iter().copied(),
-        );
-        let read_message_patterns = VecDeque::from_iter(
-            handshake_pattern.message_patterns(!is_initiator).into_iter().copied(),
-        );
+        let write_message_patterns =
+            VecDeque::from_iter(handshake_pattern.message_patterns(is_initiator).iter().copied());
+        let read_message_patterns =
+            VecDeque::from_iter(handshake_pattern.message_patterns(!is_initiator).iter().copied());
 
         Self {
             handshake_pattern,
@@ -335,32 +333,32 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                             let pk = pubkey.to_pk_compressed();
                             message_buffer.extend(pk.as_ref());
 
-                            self.state.mix_hash(&pk);
+                            self.state.mix_hash(pk);
                             self.keyset.e = e;
                         }
                         MessagePattern::S => {
                             let s = self.keyset.expect_s().to_pk()?.to_pk_compressed();
-                            let enc = self.state.encrypt_and_hash(&s)?;
+                            let enc = self.state.encrypt_and_hash(s)?;
                             message_buffer.extend(&enc)
                         }
                         MessagePattern::EE => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_re())?)
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_re())?)
                         }
                         MessagePattern::ES if self.is_initiator => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_rs())?)
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_rs())?)
                         }
                         MessagePattern::ES => self
                             .state
-                            .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_re())?),
+                            .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_re())?),
                         MessagePattern::SE if self.is_initiator => self
                             .state
-                            .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_re())?),
+                            .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_re())?),
                         MessagePattern::SE => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_rs())?)
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_rs())?)
                         }
                         MessagePattern::SS => self
                             .state
-                            .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_rs())?),
+                            .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_rs())?),
                     };
                 }
 
@@ -414,7 +412,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                             let re = E::Pk::from_pk_compressed_slice(&message[pos..next_pos])?;
                             pos = next_pos;
 
-                            self.state.mix_hash(&re.to_pk_compressed());
+                            self.state.mix_hash(re.to_pk_compressed());
                             self.keyset.re = Some(re);
                         }
                         MessagePattern::S => {
@@ -428,25 +426,25 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
                             pos = next_pos;
                         }
                         MessagePattern::EE => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_re())?);
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_re())?);
                         }
                         MessagePattern::ES if self.is_initiator => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_rs())?);
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_rs())?);
                         }
                         MessagePattern::ES => {
                             self.state
-                                .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_re())?);
+                                .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_re())?);
                         }
                         MessagePattern::SE if self.is_initiator => {
                             self.state
-                                .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_re())?);
+                                .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_re())?);
                         }
                         MessagePattern::SE => {
-                            self.state.mix_key(self.keyset.e.ecdh(&self.keyset.expect_rs())?);
+                            self.state.mix_key(self.keyset.e.ecdh(self.keyset.expect_rs())?);
                         }
                         MessagePattern::SS => {
                             self.state
-                                .mix_key(self.keyset.expect_s().ecdh(&self.keyset.expect_rs())?);
+                                .mix_key(self.keyset.expect_s().ecdh(self.keyset.expect_rs())?);
                         }
                     }
                 }
