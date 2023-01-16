@@ -35,12 +35,19 @@ jobs:
           - i2p
           - nym
           - mixnets
-          - dns,mixnets
-          - noise
+          - x25519
           - ed25519
           - secp256k1
-          - ed25519,secp256k1
+          - bip340
+          - sha2
+          - sha3
+          - blake3
+          - noise_x25519,noise_secp256k1
+          - noise_x25519,noise_sha2
+          - noise_x25519,noise_blake3
           - pem
+          - multibase
+          - bech32
           - serde
     steps:
       - uses: actions/checkout@v2
