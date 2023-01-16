@@ -2,7 +2,7 @@
 name = "cyphergraphy"
 version = "0.1.0"
 description = "Implementation-independent abstractions for main cryptographic algorithms (part of cyphernet suite)"
-keywords = ["cyphernet", "privacy", "secp256k1", "curve25519", "ed25519", "schnorr"]
+keywords = ["cyphernet", "privacy", "secp256k1", "curve25519", "ed25519"]
 categories = ["network-programming", "cryptography"]
 readme = "README.md"
 authors = { workspace = true }
