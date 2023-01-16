@@ -39,17 +39,17 @@ pub use digest::*;
 
 use crate::display::{Encoding, MultiDisplay};
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From, Default)]
 #[display("invalid secret key")]
 #[non_exhaustive]
 pub struct EcSkInvalid {}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From, Default)]
 #[display("invalid public key")]
 #[non_exhaustive]
 pub struct EcPkInvalid {}
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error, From, Default)]
 #[display("invalid signature data")]
 #[non_exhaustive]
 pub struct EcSigInvalid {}
