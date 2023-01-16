@@ -1,42 +1,79 @@
+[workspace]
+default-members = [
+    "addr",
+    "cyphergraphy",
+    "eidolon",
+    "socks5-client",
+    "noise",
+    ".",
+]
+
+[workspace.package]
+authors = ["Dr. Maxim Orlovsky <orlovsky@cyphernet.org>"]
+homepage = "https://cyphernet.org"
+repository = "https://github.com/Cyphernet-WG/rust-cyphernet"
+rust-version = "1.65"
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+amplify = "4.0.0-beta.4"
+
+###
+### Main package (`cyphernet`)
+###
+
 [package]
 name = "cyphernet"
 version = "0.1.0"
-license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@cyphernet.org>"]
 description = "Cyphernet is a set of libraries for privacy-preserving networking apps"
-repository = "https://github.com/Cyphernet-WG/rust-cyphernet"
-homepage = "https://cyphernet.org"
 keywords = ["privacy", "noise-framework", "noise-protocol", "cypherpunk", "mixnet", "tor", "nym", "i2p"]
 categories = ["network-programming", "cryptography", "encoding"]
 readme = "README.md"
-rust-version = "1.65"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
 
 [dependencies]
-amplify = "4.0.0-beta.4"
-multibase = { version = "0.9.1" }
-secp256k1 = { version = "0.25.0", optional = true, features = ["rand"] }
-ed25519 = { package = "ed25519-compact", version = "2.0.2", features = ["ed25519", "x25519", "random"], optional = true }
-chacha20poly1305 = { version = "0.10.1", optional = true }
-hmac = { version = "0.12.1", optional = true }
-sha2 = { version = "0.10.6", optional = true }
-sha3 = { version = "0.10.6", optional = true }
-base32 = { version = "0.4.0", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
-
-[dev-dependencies]
-quickcheck_macros = { version = "1", default-features = false }
-quickcheck = { version = "1", default-features = false }
+cyphergraphy = { path = "cyphergraphy" }
+cypheraddr = { path = "addr" }
+noise-framework = { path = "noise", optional = true }
+eidolon = { path = "eidolon" }
+socks5-client = { path = "socks5-client" }
 
 [features]
 default = []
-all = ["serde", "tor", "i2p", "nym", "dns", "pem", "ed25519", "secp256k1"]
-tor = ["sha3", "ed25519", "base32"]
-i2p = ["ed25519"]
-nym = []
+
+# Mixnets
+tor = ["cypheraddr/tor"]
+i2p = ["cypheraddr/i2p"]
+nym = ["cypheraddr/nym"]
 mixnets = ["tor", "i2p", "nym"]
-dns = []
-pem = ["ed25519/pem"]
-noise = ["sha2", "hmac", "chacha20poly1305", "ed25519"]
+dns = ["cypheraddr/dns"]
+
+# Elliptic curve algorithms
+x25519 = ["cyphergraphy/x25519"]
+ed25519 = ["cyphergraphy/ed25519"]
+secp256k1 = ["cyphergraphy/secp256k1"]
+bip340 = ["cyphergraphy/bip340"]
+
+# Digests
+sha2 = ["cyphergraphy/sha2"]
+sha3 = ["cyphergraphy/sha3"]
+blake3 = ["cyphergraphy/blake3"]
+
+# Noise variants algorithms
+noise_sha2 = ["noise-framework/sha2"]
+noise_sha3 = ["noise-framework/sha3"]
+noise_blake3 = ["noise-framework/blake3"]
+noise_x25519 = ["noise-framework/x25519"]
+noise_secp256k1 = ["noise-framework/secp256k1"]
+
+# Encodings
+pem = ["cyphergraphy/pem"]
+multibase = ["cyphergraphy/multibase"]
+serde = ["cypheraddr/serde"]
+bech32 = ["cyphergraphy/bech32"]

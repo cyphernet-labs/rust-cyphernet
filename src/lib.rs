@@ -5,7 +5,7 @@
 // Written in 2019-2023 by
 //     Dr. Maxim Orlovsky <orlovsky@cyphernet.org>
 //
-// Copyright 2022-2023 Cyphernet Association, Switzerland
+// Copyright 2022-2023 Cyphernet Initiative, Switzerland
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,16 +51,19 @@
 //! * [`addr::ProxiedHost`] - host name + proxy (there are IP/DNS w/o proxy and with proxy)
 //! * [`addr::ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
 
-#[macro_use]
-extern crate amplify;
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde;
-extern crate core;
+pub extern crate cypheraddr as addr;
 
-pub mod addr;
-pub mod crypto;
-#[cfg(feature = "noise")]
-pub mod noise;
-#[cfg(test)]
-mod test;
+pub mod encrypt {
+    #[cfg(feature = "noise-framework")]
+    pub extern crate noise;
+}
+
+pub mod auth {
+    pub extern crate eidolon;
+}
+
+pub mod proxy {
+    pub extern crate socks5_client as socks5;
+}
+
+pub use cypher::*;

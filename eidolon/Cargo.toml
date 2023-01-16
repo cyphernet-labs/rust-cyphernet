@@ -1,0 +1,17 @@
+[package]
+name = "eidolon"
+version = "0.1.0"
+description = "Binary authentication protocol for network connections abstracted from encryption"
+keywords = ["cyphernet", "privacy", "euthentification", "network", "p2p"]
+categories = ["network-programming", "cryptography"]
+readme = "README.md"
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+amplify = { workspace = true }
+cyphergraphy = { path = "../cyphergraphy" }
