@@ -85,7 +85,7 @@ API reference documentation for the library can be accessed at
 Cyphernet is a conceptual approach for a privacy-preserving networking, based on
 the following stack of layers:
 
-![Cyphernet stack](https://github.com/Cyphernet-WG/rust-cyphernet/tree/master/assets/cyphernet-stack.svg)
+![Cyphernet stack](https://raw.githubusercontent.com/Cyphernet-WG/rust-cyphernet/master/assets/cyphernet-stack.svg)
 
 
 ## Licensing
