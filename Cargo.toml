@@ -47,12 +47,14 @@ socks5-client = { path = "socks5-client" }
 [features]
 default = []
 
-# Mixnets
+# Addresses
 tor = ["cypheraddr/tor"]
 i2p = ["cypheraddr/i2p"]
 nym = ["cypheraddr/nym"]
 mixnets = ["tor", "i2p", "nym"]
 dns = ["cypheraddr/dns"]
+p2p-ed25519 = ["cypheraddr/p2p-ed25519"]
+p2p-secp256k1 = ["cypheraddr/p2p-secp256k1"]
 
 # Elliptic curve algorithms
 x25519 = ["cyphergraphy/x25519"]
