@@ -60,6 +60,7 @@ pub mod i2p;
 mod net;
 #[cfg(feature = "nym")]
 pub mod nym;
+#[cfg(any(feature = "p2p-ed25519", feature = "p2p-secp256k1"))]
 mod p2p;
 mod proxied;
 #[cfg(feature = "tor")]
@@ -69,6 +70,7 @@ pub use host::HostName;
 #[cfg(feature = "dns")]
 pub use host::InetHost;
 pub use net::{NetAddr, PartialAddr};
+#[cfg(any(feature = "p2p-ed25519", feature = "p2p-secp256k1"))]
 pub use p2p::{PeerAddr, PeerAddrParseError};
 pub use proxied::{ProxiedAddr, ProxiedHost};
 

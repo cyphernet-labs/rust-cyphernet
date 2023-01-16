@@ -101,6 +101,7 @@ impl Host for HostName {
             HostName::Ip(_) => false,
             #[cfg(feature = "dns")]
             HostName::Dns(_) => false,
+            #[allow(unreachable_patterns)]
             _ => true,
         }
     }

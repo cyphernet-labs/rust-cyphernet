@@ -14,7 +14,7 @@ license = { workspace = true }
 
 [dependencies]
 amplify = { workspace = true }
-cyphergraphy = { path = "../cyphergraphy", features = ["ed25519"], optional = true }
+cyphergraphy = { path = "../cyphergraphy", optional = true }
 sha3 = { version = "0.10.6", optional = true }
 base32 = { version = "0.4.0", optional = true }
 serde = { version = "1", features = ["derive"], optional = true }
@@ -24,3 +24,5 @@ dns = []
 tor = ["sha3", "cyphergraphy", "base32"]
 i2p = ["cyphergraphy"]
 nym = []
+p2p-ed25519 = ["cyphergraphy/ed25519"]
+p2p-secp256k1 = ["cyphergraphy/secp256k1"]

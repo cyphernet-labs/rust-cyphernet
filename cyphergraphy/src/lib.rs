@@ -210,6 +210,7 @@ impl<S: EcSig> Cert<S> {
     }
 }
 
+#[cfg(feature = "ed25519-compact")]
 mod ed22519_compact_err_convert {
     use ed25519_compact::Error;
 

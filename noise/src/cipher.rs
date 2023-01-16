@@ -21,10 +21,11 @@
 
 use chacha20poly1305::aead::{Aead, Payload};
 use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
-use cypher::x25519::SharedSecret;
 
 use crate::error::EncryptionError;
 use crate::NoiseNonce;
+
+pub type SharedSecret = [u8; 32];
 
 fn _nonce(nonce: NoiseNonce) -> Nonce {
     let mut chacha_nonce = [0u8; 12];

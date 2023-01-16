@@ -174,8 +174,9 @@ impl Encoding for HostName {
         }
     }
 
+    #[allow(unreachable_code, unused_variables)] // Due to feature gates
     fn encode(&self, writer: &mut impl Write) -> Result<(), EncodingError> {
-        let name = match self {
+        let name: String = match self {
             HostName::Ip(IpAddr::V4(ip)) => {
                 IPV4.encode(writer)?;
                 return ip.encode(writer);
@@ -184,9 +185,13 @@ impl Encoding for HostName {
                 IPV6.encode(writer)?;
                 return ip.encode(writer);
             }
+            #[cfg(feature = "dns")]
             HostName::Dns(name) => name.to_string(),
+            #[cfg(feature = "tor")]
             HostName::Tor(addr) => addr.to_string(),
+            #[cfg(feature = "i2p")]
             HostName::I2p(addr) => addr.to_string(),
+            #[cfg(feature = "nym")]
             HostName::Nym(addr) => addr.to_string(),
             _ => return Err(EncodingError::AddrNotSupported),
         };

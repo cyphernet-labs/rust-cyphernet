@@ -21,10 +21,9 @@
 
 use std::collections::VecDeque;
 
-use cypher::x25519::SharedSecret;
 use cypher::{Digest, EcPk, Ecdh};
 
-use crate::cipher::{decrypt, encrypt, rekey};
+use crate::cipher::{decrypt, encrypt, rekey, SharedSecret};
 use crate::error::{EncryptionError, NoiseError};
 use crate::hkdf::{hkdf_2, hkdf_3};
 use crate::patterns::{HandshakePattern, Keyset, MessagePattern};
@@ -62,19 +61,14 @@ pub struct CipherState {
 }
 
 impl CipherState {
-    pub fn new() -> Self {
-        CipherState {
-            k: SharedSecret::empty(),
-            n: 0,
-        }
-    }
+    pub fn new() -> Self { CipherState { k: [0u8; 32], n: 0 } }
 
     pub fn initialize_key(&mut self, key: SharedSecret) {
         self.k = key;
         self.n = 0;
     }
 
-    pub fn has_key(&self) -> bool { !self.k.is_empty() }
+    pub fn has_key(&self) -> bool { self.k != [0u8; 32] }
 
     pub fn nonce(&self) -> NoiseNonce { self.n }
 
