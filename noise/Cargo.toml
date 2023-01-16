@@ -29,3 +29,7 @@ secp256k1 = ["cyphergraphy/secp256k1", "cyphergraphy/keygen_secp256k1"]
 sha2 = ["cyphergraphy/sha2"]
 sha3 = ["cyphergraphy/sha3"]
 blake3 = ["cyphergraphy/blake3"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["--cfg", "docsrs"]

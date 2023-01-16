@@ -46,3 +46,7 @@ bip340 = ["secp256k1"]
 # Other:
 pem = ["ed25519-compact/pem", "ed25519-compact/std"]
 # multibase
+
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["--cfg", "docsrs"]

@@ -15,3 +15,7 @@ license = { workspace = true }
 [dependencies]
 amplify = { workspace = true }
 cyphergraphy = { path = "../cyphergraphy" }
+
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["--cfg", "docsrs"]

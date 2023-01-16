@@ -19,6 +19,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 //! Rust library providing a set of address data types with minimal dependencies
 //! which allow simple use of.
 //! - Tor, Nym, I2P and other mix networks and SOCKS proxies;
@@ -32,14 +34,14 @@
 //! applications.
 //!
 //! Network addresses provided by the library include the following types:
-//! * [`addr::InetHost`] - IP addr or DNS name
-//! * [`addr::HostName`] - IP, DNS, Tor, I2P, Nym host name (no port or proxy information)
-//! * [`addr::NetAddr`] - any type of host name + port information
-//! * [`addr::PartialAddr`] - any type of host name + optional port, which defaults to generic const
-//!   if not provided
-//! * [`addr::PeerAddr`] - any of the above addresses + node public key for authentication
-//! * [`addr::ProxiedHost`] - host name + proxy (there are IP/DNS w/o proxy and with proxy)
-//! * [`addr::ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
+//! * [`InetHost`] - IP addr or DNS name
+//! * [`HostName`] - IP, DNS, Tor, I2P, Nym host name (no port or proxy information)
+//! * [`NetAddr`] - any type of host name + port information
+//! * [`PartialAddr`] - any type of host name + optional port, which defaults to generic const if
+//!   not provided
+//! * [`PeerAddr`] - any of the above addresses + node public key for authentication
+//! * [`ProxiedHost`] - host name + proxy (there are IP/DNS w/o proxy and with proxy)
+//! * [`ProxiedAddr`] - any of the above addresses + proxy (thus IP/DNS is always proxied)
 //!
 //! The library tries to minimize number of dependencies. Most of its
 //! functionality is available via non-default features, like:

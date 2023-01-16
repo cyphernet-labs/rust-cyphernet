@@ -19,6 +19,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 //! Implementation-independent abstractions for main cryptographic algorithms
 //! used for end-to-end encryption and authorization.
 

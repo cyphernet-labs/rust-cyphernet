@@ -19,6 +19,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+
 //! Pure rust SOCKS5 protocol implementation for a client with zero dependencies.
 //!
 //! The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)

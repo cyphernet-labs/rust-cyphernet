@@ -79,3 +79,7 @@ pem = ["cyphergraphy/pem"]
 multibase = ["cyphergraphy/multibase"]
 serde = ["cypheraddr/serde"]
 bech32 = ["cyphergraphy/bech32"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["--cfg", "docsrs"]

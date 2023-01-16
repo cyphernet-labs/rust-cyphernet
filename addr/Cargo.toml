@@ -26,3 +26,7 @@ i2p = ["cyphergraphy/ed25519"]
 nym = []
 p2p-ed25519 = ["cyphergraphy/ed25519"]
 p2p-secp256k1 = ["cyphergraphy/secp256k1"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustc-args = ["--cfg", "docsrs"]
