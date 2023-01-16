@@ -112,7 +112,7 @@ pub enum EcVerifyError {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcPk: Clone + Eq + Debug + MultiDisplay<Encoding> {
+pub trait EcPk: Clone + Eq + Send + Debug + MultiDisplay<Encoding> {
     const COMPRESSED_LEN: usize;
     const CURVE_NAME: &'static str;
 
@@ -131,7 +131,7 @@ pub trait EcPk: Clone + Eq + Debug + MultiDisplay<Encoding> {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcSk: Clone + Eq {
+pub trait EcSk: Clone + Eq + Send {
     type Pk: EcPk;
 
     fn generate_keypair() -> (Self, Self::Pk)
