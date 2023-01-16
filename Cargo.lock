@@ -203,7 +203,7 @@ version = "0.1.0"
 dependencies = [
  "amplify",
  "base32",
- "cyphergraphy",
+ "cyphergraphy 0.1.0",
  "serde",
  "sha3",
 ]
@@ -223,12 +223,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cyphergraphy"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c89b94c89b484ddb937306c3ae8122b866749d1d47768b5c4a1e3e8e72ea8270"
+dependencies = [
+ "amplify",
+]
+
+[[package]]
 name = "cyphernet"
 version = "0.1.0"
 dependencies = [
  "cypheraddr",
- "cyphergraphy",
- "eidolon",
+ "cyphergraphy 0.1.0",
+ "eidolon-auth",
  "noise-framework",
  "socks5-client",
 ]
@@ -291,11 +300,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "eidolon"
+name = "eidolon-auth"
 version = "0.1.0"
 dependencies = [
  "amplify",
- "cyphergraphy",
+ "cyphergraphy 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -369,7 +378,7 @@ version = "0.1.0"
 dependencies = [
  "amplify",
  "chacha20poly1305",
- "cyphergraphy",
+ "cyphergraphy 0.1.0",
 ]
 
 [[package]]

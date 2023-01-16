@@ -1,5 +1,5 @@
 [package]
-name = "eidolon"
+name = "eidolon-auth"
 version = "0.1.0"
 description = "Binary authentication protocol for network connections abstracted from encryption"
 keywords = ["cyphernet", "privacy", "euthentification", "network", "p2p"]
@@ -12,9 +12,12 @@ rust-version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
 
+[lib]
+name = "eidolon"
+
 [dependencies]
 amplify = { workspace = true }
-cyphergraphy = { path = "../cyphergraphy" }
+cyphergraphy = { worskpace = true }
 
 [package.metadata.docs.rs]
 all-features = true

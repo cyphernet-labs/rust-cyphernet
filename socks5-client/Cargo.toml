@@ -14,7 +14,7 @@ license = { workspace = true }
 
 [dependencies]
 amplify = { workspace = true }
-cypheraddr = { path = "../addr" }
+cypheraddr = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true
