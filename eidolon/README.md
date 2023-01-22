@@ -34,7 +34,7 @@ License: Apache-2.0
 Language: Rust
 Compiler: 1.65
 Author: Maxim Orlovsky
-Maintained: Cyphernet Initiative, Switzerland
+Maintained: Cyphernet DAO, Switzerland
 Maintainers:
   Maxim Orlovsky:
     GitHub: @dr-orlovsky
