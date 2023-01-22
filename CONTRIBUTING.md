@@ -1,5 +1,5 @@
-Contributing to LNP/BP projects
-===============================
+Contributing guidelines
+=======================
 
 Contributions are very welcome. When contributing code, please follow these
 simple guidelines.
