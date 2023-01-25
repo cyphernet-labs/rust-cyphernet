@@ -1,9 +1,9 @@
 # Noise protocol framework in rust
 
-![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
-![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
-![Lints](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet)
+![Build](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Build/badge.svg)
+![Tests](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Tests/badge.svg)
+![Lints](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet)
 
 [![crates.io](https://img.shields.io/crates/v/noise-framework)](https://crates.io/crates/noise-framework)
 [![Docs](https://docs.rs/noise-framework/badge.svg)](https://docs.rs/noise-framework)
@@ -17,7 +17,7 @@ The library provides pure rust implementation of
 made in functional style, where a specific Noise scheme is constructed as a
 concrete type (like `Noise_XK<Secp256,ChaChaPoly,Sha256>`).
 
-The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet).
+The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-DAO/rust-cyphernet).
 
 
 ## Manifest

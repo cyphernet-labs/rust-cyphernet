@@ -29,7 +29,7 @@
 //! The crate may be used in a way that prevents using DNS names (outside mixnet
 //! scope).
 //!
-//! The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet).
+//! The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-DAO/rust-cyphernet).
 //! Cyphernet is a set of libraries for privacy-preserving networking & internet
 //! applications.
 //!

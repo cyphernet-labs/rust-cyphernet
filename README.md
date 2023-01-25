@@ -1,9 +1,9 @@
 # Cyphernet: privacy-preserving networking & internet applications
 
-![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
-![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
-![Lints](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet)
+![Build](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Build/badge.svg)
+![Tests](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Tests/badge.svg)
+![Lints](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet)
 
 [![crates.io](https://img.shields.io/crates/v/cyphernet)](https://crates.io/crates/cyphernet)
 [![Docs](https://docs.rs/cyphernet/badge.svg)](https://docs.rs/cyphernet)
@@ -85,7 +85,7 @@ API reference documentation for the library can be accessed at
 Cyphernet is a conceptual approach for a privacy-preserving networking, based on
 the following stack of layers:
 
-![Cyphernet stack](https://raw.githubusercontent.com/Cyphernet-WG/rust-cyphernet/master/assets/cyphernet-stack.svg)
+![Cyphernet stack](https://raw.githubusercontent.com/Cyphernet-DAO/rust-cyphernet/master/assets/cyphernet-stack.svg)
 
 
 ## Licensing

@@ -11,7 +11,7 @@ default-members = [
 [workspace.package]
 authors = ["Dr. Maxim Orlovsky <orlovsky@cyphernet.org>"]
 homepage = "https://cyphernet.org"
-repository = "https://github.com/Cyphernet-WG/rust-cyphernet"
+repository = "https://github.com/Cyphernet-DAO/rust-cyphernet"
 rust-version = "1.65"
 edition = "2021"
 license = "Apache-2.0"

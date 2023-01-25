@@ -23,7 +23,7 @@
 
 //! Pure rust SOCKS5 protocol implementation for a client with zero dependencies.
 //!
-//! The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)
+//! The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-DAO/rust-cyphernet)
 //! and used by it for generic implementation of noise protocol framework abstracted
 //! from the underlying curve.
 

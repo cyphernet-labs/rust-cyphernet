@@ -1,9 +1,9 @@
 # Cyphergraphy: Implementation-independent abstractions for main cryptographic algorithms
 
-![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
-![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
-![Lints](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet)
+![Build](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Build/badge.svg)
+![Tests](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Tests/badge.svg)
+![Lints](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet)
 
 [![crates.io](https://img.shields.io/crates/v/cyphergraphy)](https://crates.io/crates/cyphergraphy)
 [![Docs](https://docs.rs/cyphergraphy/badge.svg)](https://docs.rs/cyphergraphy)
@@ -26,7 +26,7 @@ for end-to-end encryption and authorization:
   - SHA3: SHA3-256 & SHA3-512
   - Blake3
 
-The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet)
+The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-DAO/rust-cyphernet)
 and used by other libraries of the suite for handling internet addresses.
 
 

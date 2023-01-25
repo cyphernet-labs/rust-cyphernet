@@ -1,9 +1,9 @@
 # Cypheraddr: network addresses supporting SOCKS5, Tor, I2P, Nym and P2P pubkeys
 
-![Build](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Build/badge.svg)
-![Tests](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Tests/badge.svg)
-![Lints](https://github.com/Cyphernet-WG/rust-cyphernet/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-WG/rust-cyphernet)
+![Build](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Build/badge.svg)
+![Tests](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Tests/badge.svg)
+![Lints](https://github.com/Cyphernet-DAO/rust-cyphernet/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet/branch/master/graph/badge.svg)](https://codecov.io/gh/Cyphernet-DAO/rust-cyphernet)
 
 [![crates.io](https://img.shields.io/crates/v/cypheraddr)](https://crates.io/crates/cypheraddr)
 [![Docs](https://docs.rs/cypheraddr/badge.svg)](https://docs.rs/cypheraddr)
@@ -17,7 +17,7 @@ which allow simple use of.
 The crate may be used in a way that prevents using DNS names (outside mixnet 
 scope).
 
-The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-WG/rust-cyphernet).
+The library is a part of [rust cyphernet suite](https://github.com/Cyphernet-DAO/rust-cyphernet).
 
 
 ## Manifest
