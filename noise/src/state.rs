@@ -605,4 +605,14 @@ impl<E: Ecdh, D: Digest> NoiseState<E, D> {
             NoiseState::Active { handshake_hash, .. } => Some(*handshake_hash),
         }
     }
+
+    pub fn get_remote_static_key(&self) -> Option<E::Pk> {
+        match self {
+            NoiseState::AwaitWrite(_) | NoiseState::Handshake(_) => None,
+            NoiseState::Active {
+                remote_static_pubkey,
+                ..
+            } => remote_static_pubkey.clone(),
+        }
+    }
 }
