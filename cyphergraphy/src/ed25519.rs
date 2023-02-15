@@ -28,20 +28,20 @@ use crate::display::{Encoding, MultiDisplay};
 use crate::{EcPk, EcPkInvalid, EcSig, EcSigInvalid, EcSign, EcSk, EcSkInvalid, EcVerifyError};
 
 // ============================================================================
-// ed25519_compact keys
+// ec25519 keys
 
-impl MultiDisplay<Encoding> for ed25519_compact::PublicKey {
+impl MultiDisplay<Encoding> for ec25519::PublicKey {
     type Display = String;
     fn display_fmt(&self, f: &Encoding) -> Self::Display { f.encode(self.as_slice()) }
 }
 
-impl EcPk for ed25519_compact::PublicKey {
+impl EcPk for ec25519::PublicKey {
     const COMPRESSED_LEN: usize = 32;
     const CURVE_NAME: &'static str = "Curve25519";
     type Compressed = [u8; 32];
 
     fn base_point() -> Self {
-        ed25519_compact::PublicKey::from_slice(
+        ec25519::PublicKey::from_slice(
             &[
                 0x58, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
                 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
@@ -54,7 +54,7 @@ impl EcPk for ed25519_compact::PublicKey {
     fn to_pk_compressed(&self) -> Self::Compressed { *self.deref() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
-        Ok(ed25519_compact::PublicKey::new(pk))
+        Ok(ec25519::PublicKey::new(pk))
     }
 
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
@@ -67,12 +67,12 @@ impl EcPk for ed25519_compact::PublicKey {
     }
 }
 
-impl EcSk for ed25519_compact::SecretKey {
-    type Pk = ed25519_compact::PublicKey;
+impl EcSk for ec25519::SecretKey {
+    type Pk = ec25519::PublicKey;
 
     fn generate_keypair() -> (Self, Self::Pk)
     where Self: Sized {
-        let pair = ed25519_compact::KeyPair::generate();
+        let pair = ec25519::KeyPair::generate();
         (pair.sk, pair.pk)
     }
 
@@ -89,7 +89,7 @@ impl EcSk for ed25519_compact::SecretKey {
     derive(Serialize, Deserialize),
     serde(into = "String", try_from = "String")
 )]
-pub struct PublicKey(#[from] ed25519_compact::PublicKey);
+pub struct PublicKey(#[from] ec25519::PublicKey);
 
 impl PartialOrd for PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -106,16 +106,16 @@ impl EcPk for PublicKey {
     const CURVE_NAME: &'static str = "Edward25519";
     type Compressed = [u8; 32];
 
-    fn base_point() -> Self { Self(ed25519_compact::PublicKey::base_point()) }
+    fn base_point() -> Self { Self(ec25519::PublicKey::base_point()) }
 
     fn to_pk_compressed(&self) -> Self::Compressed { self.0.to_pk_compressed() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
-        ed25519_compact::PublicKey::from_pk_compressed(pk).map(Self)
+        ec25519::PublicKey::from_pk_compressed(pk).map(Self)
     }
 
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
-        ed25519_compact::PublicKey::from_pk_compressed_slice(slice).map(Self)
+        ec25519::PublicKey::from_pk_compressed_slice(slice).map(Self)
     }
 }
 
@@ -126,7 +126,7 @@ impl MultiDisplay<Encoding> for PublicKey {
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
-pub struct PrivateKey(#[from] ed25519_compact::SecretKey);
+pub struct PrivateKey(#[from] ec25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
@@ -141,7 +141,7 @@ impl EcSk for PrivateKey {
 
     fn generate_keypair() -> (Self, Self::Pk)
     where Self: Sized {
-        let (sk, pk) = ed25519_compact::SecretKey::generate_keypair();
+        let (sk, pk) = ec25519::SecretKey::generate_keypair();
         (sk.into(), pk.into())
     }
 
@@ -151,21 +151,21 @@ impl EcSk for PrivateKey {
 // ============================================================================
 // EdDSA
 
-impl EcSign for ed25519_compact::SecretKey {
-    type Sig = ed25519_compact::Signature;
+impl EcSign for ec25519::SecretKey {
+    type Sig = ec25519::Signature;
 
-    fn sign(&self, msg: impl AsRef<[u8]>) -> ed25519_compact::Signature { self.sign(msg, None) }
+    fn sign(&self, msg: impl AsRef<[u8]>) -> ec25519::Signature { self.sign(msg, None) }
 }
 
-impl MultiDisplay<Encoding> for ed25519_compact::Signature {
+impl MultiDisplay<Encoding> for ec25519::Signature {
     type Display = String;
     fn display_fmt(&self, f: &Encoding) -> Self::Display { f.encode(self.as_slice()) }
 }
 
-impl EcSig for ed25519_compact::Signature {
+impl EcSig for ec25519::Signature {
     const COMPRESSED_LEN: usize = 64;
 
-    type Pk = ed25519_compact::PublicKey;
+    type Pk = ec25519::PublicKey;
     type Compressed = [u8; 64];
 
     fn to_sig_compressed(&self) -> Self::Compressed { *self.deref() }
@@ -186,14 +186,14 @@ impl EcSig for ed25519_compact::Signature {
 /// Cryptographic signature.
 #[derive(Wrapper, Copy, Clone, PartialEq, Eq, Hash, Debug)]
 #[wrapper(Deref)]
-pub struct Signature(ed25519_compact::Signature);
+pub struct Signature(ec25519::Signature);
 
 impl AsRef<[u8]> for Signature {
     fn as_ref(&self) -> &[u8] { self.0.as_ref() }
 }
 
-impl From<ed25519_compact::Signature> for Signature {
-    fn from(other: ed25519_compact::Signature) -> Self { Self(other) }
+impl From<ec25519::Signature> for Signature {
+    fn from(other: ec25519::Signature) -> Self { Self(other) }
 }
 
 impl MultiDisplay<Encoding> for Signature {
@@ -209,11 +209,11 @@ impl EcSig for Signature {
     fn to_sig_compressed(&self) -> Self::Compressed { self.0.to_sig_compressed() }
 
     fn from_sig_compressed(sig: Self::Compressed) -> Result<Self, EcSigInvalid> {
-        ed25519_compact::Signature::from_sig_compressed(sig).map(Self)
+        ec25519::Signature::from_sig_compressed(sig).map(Self)
     }
 
     fn from_sig_compressed_slice(slice: &[u8]) -> Result<Self, EcSigInvalid> {
-        ed25519_compact::Signature::from_sig_compressed_slice(slice).map(Self)
+        ec25519::Signature::from_sig_compressed_slice(slice).map(Self)
     }
 
     fn verify(&self, pk: &Self::Pk, msg: impl AsRef<[u8]>) -> Result<(), EcVerifyError> {
@@ -248,7 +248,7 @@ mod human_readable {
         ///
         /// `did:key:MULTIBASE(base58-btc, MULTICODEC(public-key-type, raw-public-key-bytes))`
         pub fn to_human_readable(&self) -> String {
-            let mut buf = [0; 2 + ed25519_compact::PublicKey::BYTES];
+            let mut buf = [0; 2 + ec25519::PublicKey::BYTES];
             buf[..2].copy_from_slice(&Self::MULTICODEC_TYPE);
             buf[2..].copy_from_slice(self.0.deref());
 
@@ -269,7 +269,7 @@ mod human_readable {
             let (_, bytes) = multibase::decode(s)?;
 
             if let Some(bytes) = bytes.strip_prefix(&Self::MULTICODEC_TYPE) {
-                let key = ed25519_compact::PublicKey::from_slice(bytes)?;
+                let key = ec25519::PublicKey::from_slice(bytes)?;
 
                 Ok(Self(key))
             } else {
@@ -300,7 +300,7 @@ mod human_readable {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             let (_, bytes) = multibase::decode(s)?;
-            let sig = ed25519_compact::Signature::from_slice(bytes.as_slice())?;
+            let sig = ec25519::Signature::from_slice(bytes.as_slice())?;
 
             Ok(Self(sig))
         }
@@ -312,24 +312,24 @@ mod pem_der {
     use super::*;
 
     impl PublicKey {
-        pub fn from_pem(pem: &str) -> Result<Self, ed25519_compact::Error> {
-            ed25519_compact::PublicKey::from_pem(pem).map(Self)
+        pub fn from_pem(pem: &str) -> Result<Self, ec25519::Error> {
+            ec25519::PublicKey::from_pem(pem).map(Self)
         }
 
-        pub fn from_der(der: &[u8]) -> Result<Self, ed25519_compact::Error> {
-            ed25519_compact::PublicKey::from_der(der).map(Self::from)
+        pub fn from_der(der: &[u8]) -> Result<Self, ec25519::Error> {
+            ec25519::PublicKey::from_der(der).map(Self::from)
         }
 
         pub fn to_pem(&self) -> String { self.0.to_pem() }
     }
 
     impl PrivateKey {
-        pub fn from_pem(pem: &str) -> Result<Self, ed25519_compact::Error> {
-            ed25519_compact::SecretKey::from_pem(pem).map(Self::from)
+        pub fn from_pem(pem: &str) -> Result<Self, ec25519::Error> {
+            ec25519::SecretKey::from_pem(pem).map(Self::from)
         }
 
-        pub fn from_der(der: &[u8]) -> Result<Self, ed25519_compact::Error> {
-            ed25519_compact::SecretKey::from_der(der).map(Self::from)
+        pub fn from_der(der: &[u8]) -> Result<Self, ec25519::Error> {
+            ec25519::SecretKey::from_der(der).map(Self::from)
         }
 
         pub fn to_pem(&self) -> String { self.0.to_pem() }

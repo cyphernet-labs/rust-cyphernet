@@ -29,22 +29,22 @@ use crate::*;
 // ============================================================================
 // ed25519_compact keys
 
-impl MultiDisplay<Encoding> for ed25519_compact::x25519::PublicKey {
+impl MultiDisplay<Encoding> for ec25519::x25519::PublicKey {
     type Display = String;
     fn display_fmt(&self, f: &Encoding) -> String { f.encode(self.as_slice()) }
 }
 
-impl EcPk for ed25519_compact::x25519::PublicKey {
+impl EcPk for ec25519::x25519::PublicKey {
     const COMPRESSED_LEN: usize = 32;
     const CURVE_NAME: &'static str = "Curve25519";
     type Compressed = [u8; 32];
 
-    fn base_point() -> Self { ed25519_compact::x25519::PublicKey::base_point() }
+    fn base_point() -> Self { ec25519::x25519::PublicKey::base_point() }
 
     fn to_pk_compressed(&self) -> Self::Compressed { *self.deref() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
-        Ok(ed25519_compact::x25519::PublicKey::new(pk))
+        Ok(ec25519::x25519::PublicKey::new(pk))
     }
 
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
@@ -57,12 +57,12 @@ impl EcPk for ed25519_compact::x25519::PublicKey {
     }
 }
 
-impl EcSk for ed25519_compact::x25519::SecretKey {
-    type Pk = ed25519_compact::x25519::PublicKey;
+impl EcSk for ec25519::x25519::SecretKey {
+    type Pk = ec25519::x25519::PublicKey;
 
     fn generate_keypair() -> (Self, Self::Pk)
     where Self: Sized {
-        let pair = ed25519_compact::x25519::KeyPair::generate();
+        let pair = ec25519::x25519::KeyPair::generate();
         (pair.sk, pair.pk)
     }
 
@@ -96,7 +96,7 @@ impl SharedSecret {
     derive(Serialize, Deserialize),
     serde(into = "String", try_from = "String")
 )] */
-pub struct PublicKey(#[from] ed25519_compact::x25519::PublicKey);
+pub struct PublicKey(#[from] ec25519::x25519::PublicKey);
 
 impl PartialOrd for PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -113,16 +113,16 @@ impl EcPk for PublicKey {
     const CURVE_NAME: &'static str = "Curve25519";
     type Compressed = [u8; 32];
 
-    fn base_point() -> Self { Self(ed25519_compact::x25519::PublicKey::base_point()) }
+    fn base_point() -> Self { Self(ec25519::x25519::PublicKey::base_point()) }
 
     fn to_pk_compressed(&self) -> Self::Compressed { self.0.to_pk_compressed() }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
-        ed25519_compact::x25519::PublicKey::from_pk_compressed(pk).map(Self)
+        ec25519::x25519::PublicKey::from_pk_compressed(pk).map(Self)
     }
 
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
-        ed25519_compact::x25519::PublicKey::from_pk_compressed_slice(slice).map(Self)
+        ec25519::x25519::PublicKey::from_pk_compressed_slice(slice).map(Self)
     }
 }
 
@@ -133,7 +133,7 @@ impl MultiDisplay<Encoding> for PublicKey {
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 #[wrapper(Deref)]
-pub struct PrivateKey(#[from] ed25519_compact::x25519::SecretKey);
+pub struct PrivateKey(#[from] ec25519::x25519::SecretKey);
 
 impl PartialOrd for PrivateKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
@@ -148,7 +148,7 @@ impl EcSk for PrivateKey {
 
     fn generate_keypair() -> (Self, Self::Pk)
     where Self: Sized {
-        let (sk, pk) = ed25519_compact::x25519::SecretKey::generate_keypair();
+        let (sk, pk) = ec25519::x25519::SecretKey::generate_keypair();
         (sk.into(), pk.into())
     }
 
@@ -158,7 +158,7 @@ impl EcSk for PrivateKey {
 // ============================================================================
 // ECDH
 
-impl Ecdh for ed25519_compact::x25519::SecretKey {
+impl Ecdh for ec25519::x25519::SecretKey {
     type SharedSecret = [u8; 32];
 
     fn ecdh(&self, pk: &Self::Pk) -> Result<Self::SharedSecret, EcdhError> { Ok(*pk.dh(self)?) }
