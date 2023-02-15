@@ -215,7 +215,7 @@ dependencies = [
  "amplify",
  "bech32",
  "blake3",
- "ed25519-compact",
+ "ec25519",
  "multibase",
  "secp256k1",
  "sha2",
@@ -280,23 +280,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "ec25519"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdfd533a2fc01178c738c99412ae1f7e1ad2cb37c2e14bfd87e9d4618171c825"
+dependencies = [
+ "ct-codecs",
+ "ed25519",
+ "getrandom",
+]
+
+[[package]]
 name = "ed25519"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91cff35c70bba8a626e3185d8cd48cc11b5437e1a5bcd15b9b5fa3c64b6dfee7"
 dependencies = [
  "signature",
-]
-
-[[package]]
-name = "ed25519-compact"
-version = "2.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a3d382e8464107391c8706b4c14b087808ecb909f6c15c34114bc42e53a9e4c"
-dependencies = [
- "ct-codecs",
- "ed25519",
- "getrandom",
 ]
 
 [[package]]
