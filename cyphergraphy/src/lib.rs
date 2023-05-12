@@ -114,7 +114,7 @@ pub enum EcVerifyError {
 /// # Safety
 ///
 /// The type provides no guarantees on the key validity upon deserialization.
-pub trait EcPk: Clone + Eq + Send + Debug + MultiDisplay<Encoding> {
+pub trait EcPk: Clone + Eq + Send + Sync + Debug + MultiDisplay<Encoding> {
     const COMPRESSED_LEN: usize;
     const CURVE_NAME: &'static str;
 
