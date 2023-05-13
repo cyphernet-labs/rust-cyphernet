@@ -50,6 +50,15 @@ noise-framework = { path = "noise", version = "0.2.0", optional = true }
 
 [features]
 default = []
+all = [
+    "eidolon",
+    "mixnets", "dns",
+    "p2p-ed25519", "p2p-secp256k1",
+    "x25519", "ed25519", "secp256k1", "bip340",
+    "sha2", "sha3", "blake3",
+    "noise_all",
+    "pem", "multibase", "serde", "bech32"
+]
 
 # Crates
 eidolon = ["eidolon-auth"]
@@ -75,6 +84,7 @@ sha3 = ["cyphergraphy/sha3"]
 blake3 = ["cyphergraphy/blake3"]
 
 # Noise variants algorithms
+noise_all = ["noise_sha2", "noise_sha3", "noise_blake3", "noise_x25519", "noise_secp256k1"]
 noise_sha2 = ["noise-framework/sha2"]
 noise_sha3 = ["noise-framework/sha3"]
 noise_blake3 = ["noise-framework/blake3"]
