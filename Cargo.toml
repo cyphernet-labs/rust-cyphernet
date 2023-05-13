@@ -44,12 +44,15 @@ license = { workspace = true }
 [dependencies]
 cyphergraphy = { workspace = true }
 cypheraddr = { workspace = true }
-eidolon-auth = { workspace = true }
+eidolon-auth = { workspace = true, optional = true }
 socks5-client = { workspace = true }
 noise-framework = { path = "noise", version = "0.2.0", optional = true }
 
 [features]
 default = []
+
+# Crates
+eidolon = ["eidolon-auth"]
 
 # Addresses
 tor = ["cypheraddr/tor"]
