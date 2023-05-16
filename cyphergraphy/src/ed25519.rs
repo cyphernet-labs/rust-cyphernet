@@ -37,7 +37,7 @@ impl MultiDisplay<Encoding> for ec25519::PublicKey {
 
 impl EcPk for ec25519::PublicKey {
     const COMPRESSED_LEN: usize = 32;
-    const CURVE_NAME: &'static str = "Curve25519";
+    const CURVE_NAME: &'static str = "Edwards25519";
     type Compressed = [u8; 32];
 
     fn base_point() -> Self {
@@ -103,7 +103,7 @@ impl Ord for PublicKey {
 
 impl EcPk for PublicKey {
     const COMPRESSED_LEN: usize = 32;
-    const CURVE_NAME: &'static str = "Edward25519";
+    const CURVE_NAME: &'static str = "Edwards25519";
     type Compressed = [u8; 32];
 
     fn base_point() -> Self { Self(ec25519::PublicKey::base_point()) }
