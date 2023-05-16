@@ -60,7 +60,9 @@ pub mod encrypt {
     pub extern crate noise;
 }
 
+#[cfg(any(feature = "eidolon"))]
 pub mod auth {
+    #[cfg(feature = "eidolon")]
     pub extern crate eidolon;
 }
 
