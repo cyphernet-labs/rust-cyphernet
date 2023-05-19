@@ -1,6 +1,6 @@
 [package]
 name = "noise-framework"
-version = "0.2.0"
+version = "0.3.0"
 description = "Noise protocol framework in functional style"
 keywords = ["cyphernet", "privacy", "noise", "end-to-end", "ecryption"]
 categories = ["network-programming", "cryptography"]
