@@ -270,7 +270,7 @@ impl<E: Ecdh, D: Digest> HandshakeState<E, D> {
         let mut name_components = vec![s!("Noise")];
         let curve_name = match E::Pk::CURVE_NAME {
             "Curve25519" => "25519",
-            "Secp356k1" => "secp256k1",
+            "Secp256k1" => "secp256k1",
             "Edwards25519" => "Edwards25519", // ECDH over Edwards-coordinate version of Curve25519
             unsupported => {
                 unimplemented!("curve {unsupported} is not supported by the Noise library")
