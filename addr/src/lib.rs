@@ -177,7 +177,7 @@ pub enum AddrParseError {
     #[cfg(feature = "tor")]
     #[display(inner)]
     /// invalid Tor ONION address
-    Tor(tor::OnionAddrError),
+    Tor(tor::OnionAddrParseError),
 
     #[from]
     #[display(inner)]

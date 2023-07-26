@@ -74,7 +74,7 @@ impl OnionAddrV3 {
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(doc_comments)]
-pub enum OnionAddrError {
+pub enum OnionAddrParseError {
     /// onion address {0} doesn't end with `.onion` suffix.
     NoSuffix(String),
 
@@ -100,26 +100,26 @@ pub enum OnionAddrError {
 }
 
 impl FromStr for OnionAddrV3 {
-    type Err = OnionAddrError;
+    type Err = OnionAddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let stripped =
-            s.strip_suffix(".onion").ok_or_else(|| OnionAddrError::NoSuffix(s.to_owned()))?;
+            s.strip_suffix(".onion").ok_or_else(|| OnionAddrParseError::NoSuffix(s.to_owned()))?;
         let data: Vec<u8> = base32::decode(ALPHABET, stripped)
-            .ok_or_else(|| OnionAddrError::InvalidBase32(s.to_owned()))?;
+            .ok_or_else(|| OnionAddrParseError::InvalidBase32(s.to_owned()))?;
         if data.len() != ONION_V3_RAW_LEN {
-            return Err(OnionAddrError::InvalidLen(s.to_owned()));
+            return Err(OnionAddrParseError::InvalidLen(s.to_owned()));
         }
         let ver = data[ONION_V3_RAW_LEN - 1];
         if ver != 3 {
-            return Err(OnionAddrError::VersionMismatch(s.to_owned(), ver));
+            return Err(OnionAddrParseError::VersionMismatch(s.to_owned(), ver));
         }
         let mut key = [0u8; 32];
         key.copy_from_slice(&data[..32]);
         let pk = OnionAddrV3::from(PublicKey::from_pk_compressed(key)?);
         let checksum = u16::from_le_bytes([data[32], data[33]]);
         if pk.checksum != checksum {
-            return Err(OnionAddrError::InvalidChecksum {
+            return Err(OnionAddrParseError::InvalidChecksum {
                 expected: pk.checksum,
                 found: checksum,
                 addr: s.to_owned(),
@@ -141,7 +141,7 @@ impl From<OnionAddrV3> for String {
 }
 
 impl TryFrom<String> for OnionAddrV3 {
-    type Error = OnionAddrError;
+    type Error = OnionAddrParseError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
 }
