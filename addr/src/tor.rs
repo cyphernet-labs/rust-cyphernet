@@ -57,8 +57,46 @@ impl From<OnionAddrV3> for PublicKey {
     fn from(onion: OnionAddrV3) -> Self { onion.pk }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[display(doc_comments)]
+pub enum OnionAddrDecodeError {
+    /// onion address has a version number {0} which is not supported.
+    UnsupportedVersion(u8),
+
+    /// onion address contains invalid public key.
+    #[from(EcPkInvalid)]
+    InvalidKey,
+
+    /// onion address contains invalid checksum.
+    InvalidChecksum,
+}
+
 impl OnionAddrV3 {
     pub fn into_public_key(self) -> PublicKey { self.pk }
+
+    pub fn from_raw_bytes(bytes: [u8; ONION_V3_RAW_LEN]) -> Result<Self, OnionAddrDecodeError> {
+        let mut pk = [0u8; 32];
+        let mut checksum = [0u8; 2];
+        let version = bytes[ONION_V3_RAW_LEN - 1];
+
+        if version != 3 {
+            return Err(OnionAddrDecodeError::UnsupportedVersion(version));
+        }
+
+        pk.copy_from_slice(&bytes[..32]);
+        checksum.copy_from_slice(&bytes[32..34]);
+
+        let pk = PublicKey::from_pk_compressed(pk)?;
+        let checksum = u16::from_le_bytes(checksum);
+        let addr = OnionAddrV3::from(pk);
+
+        if addr.checksum != checksum {
+            return Err(OnionAddrDecodeError::InvalidChecksum);
+        }
+
+        Ok(addr)
+    }
 
     pub fn into_raw_bytes(self) -> [u8; ONION_V3_RAW_LEN] {
         let mut data = [0u8; ONION_V3_RAW_LEN];
