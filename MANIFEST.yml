@@ -3,7 +3,7 @@ Type: Library
 Kind: Free software
 License: Apache-2.0
 Language: Rust
-Compiler: 1.65
+Compiler: 1.66
 Author: Maxim Orlovsky
 Maintained: Cyphernet DAO, Switzerland
 Maintainers:
