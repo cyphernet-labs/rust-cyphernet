@@ -169,7 +169,10 @@ impl FromStr for OnionAddrV3 {
 
 impl Display for OnionAddrV3 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let b32 = base32::encode(ALPHABET, &self.into_raw_bytes());
+        let mut b32 = base32::encode(ALPHABET, &self.into_raw_bytes());
+        if !f.alternate() {
+            b32 = b32.to_lowercase();
+        }
         write!(f, "{}.onion", b32)
     }
 }
@@ -182,4 +185,16 @@ impl TryFrom<String> for OnionAddrV3 {
     type Error = OnionAddrParseError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn display_from_str() {
+        let onion_str = "vww6ybal4bd7szmgncyruucpgfkqahzddi37ktceo3ah7ngmcopnpyyd.onion";
+        let onion = OnionAddrV3::from_str(onion_str).unwrap();
+        assert_eq!(onion_str, onion.to_string());
+    }
 }
