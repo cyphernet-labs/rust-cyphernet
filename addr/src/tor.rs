@@ -197,4 +197,12 @@ mod test {
         let onion = OnionAddrV3::from_str(onion_str).unwrap();
         assert_eq!(onion_str, onion.to_string());
     }
+
+    #[test]
+    fn binary_code() {
+        let onion =
+            OnionAddrV3::from_str("vww6ybal4bd7szmgncyruucpgfkqahzddi37ktceo3ah7ngmcopnpyyd.onion")
+                .unwrap();
+        assert_eq!(onion, OnionAddrV3::from_raw_bytes(onion.into_raw_bytes()).unwrap());
+    }
 }
