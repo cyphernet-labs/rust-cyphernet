@@ -57,8 +57,46 @@ impl From<OnionAddrV3> for PublicKey {
     fn from(onion: OnionAddrV3) -> Self { onion.pk }
 }
 
+#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[display(doc_comments)]
+pub enum OnionAddrDecodeError {
+    /// onion address has a version number {0} which is not supported.
+    UnsupportedVersion(u8),
+
+    /// onion address contains invalid public key.
+    #[from(EcPkInvalid)]
+    InvalidKey,
+
+    /// onion address contains invalid checksum.
+    InvalidChecksum,
+}
+
 impl OnionAddrV3 {
     pub fn into_public_key(self) -> PublicKey { self.pk }
+
+    pub fn from_raw_bytes(bytes: [u8; ONION_V3_RAW_LEN]) -> Result<Self, OnionAddrDecodeError> {
+        let mut pk = [0u8; 32];
+        let mut checksum = [0u8; 2];
+        let version = bytes[ONION_V3_RAW_LEN - 1];
+
+        if version != 3 {
+            return Err(OnionAddrDecodeError::UnsupportedVersion(version));
+        }
+
+        pk.copy_from_slice(&bytes[..32]);
+        checksum.copy_from_slice(&bytes[32..34]);
+
+        let pk = PublicKey::from_pk_compressed(pk)?;
+        let checksum = u16::from_le_bytes(checksum);
+        let addr = OnionAddrV3::from(pk);
+
+        if addr.checksum != checksum {
+            return Err(OnionAddrDecodeError::InvalidChecksum);
+        }
+
+        Ok(addr)
+    }
 
     pub fn into_raw_bytes(self) -> [u8; ONION_V3_RAW_LEN] {
         let mut data = [0u8; ONION_V3_RAW_LEN];
@@ -74,7 +112,7 @@ impl OnionAddrV3 {
 #[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[display(doc_comments)]
-pub enum OnionAddrError {
+pub enum OnionAddrParseError {
     /// onion address {0} doesn't end with `.onion` suffix.
     NoSuffix(String),
 
@@ -100,26 +138,26 @@ pub enum OnionAddrError {
 }
 
 impl FromStr for OnionAddrV3 {
-    type Err = OnionAddrError;
+    type Err = OnionAddrParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let stripped =
-            s.strip_suffix(".onion").ok_or_else(|| OnionAddrError::NoSuffix(s.to_owned()))?;
+            s.strip_suffix(".onion").ok_or_else(|| OnionAddrParseError::NoSuffix(s.to_owned()))?;
         let data: Vec<u8> = base32::decode(ALPHABET, stripped)
-            .ok_or_else(|| OnionAddrError::InvalidBase32(s.to_owned()))?;
+            .ok_or_else(|| OnionAddrParseError::InvalidBase32(s.to_owned()))?;
         if data.len() != ONION_V3_RAW_LEN {
-            return Err(OnionAddrError::InvalidLen(s.to_owned()));
+            return Err(OnionAddrParseError::InvalidLen(s.to_owned()));
         }
         let ver = data[ONION_V3_RAW_LEN - 1];
         if ver != 3 {
-            return Err(OnionAddrError::VersionMismatch(s.to_owned(), ver));
+            return Err(OnionAddrParseError::VersionMismatch(s.to_owned(), ver));
         }
         let mut key = [0u8; 32];
         key.copy_from_slice(&data[..32]);
         let pk = OnionAddrV3::from(PublicKey::from_pk_compressed(key)?);
         let checksum = u16::from_le_bytes([data[32], data[33]]);
         if pk.checksum != checksum {
-            return Err(OnionAddrError::InvalidChecksum {
+            return Err(OnionAddrParseError::InvalidChecksum {
                 expected: pk.checksum,
                 found: checksum,
                 addr: s.to_owned(),
@@ -131,7 +169,10 @@ impl FromStr for OnionAddrV3 {
 
 impl Display for OnionAddrV3 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let b32 = base32::encode(ALPHABET, &self.into_raw_bytes());
+        let mut b32 = base32::encode(ALPHABET, &self.into_raw_bytes());
+        if !f.alternate() {
+            b32 = b32.to_lowercase();
+        }
         write!(f, "{}.onion", b32)
     }
 }
@@ -141,7 +182,27 @@ impl From<OnionAddrV3> for String {
 }
 
 impl TryFrom<String> for OnionAddrV3 {
-    type Error = OnionAddrError;
+    type Error = OnionAddrParseError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> { Self::from_str(&value) }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn display_from_str() {
+        let onion_str = "vww6ybal4bd7szmgncyruucpgfkqahzddi37ktceo3ah7ngmcopnpyyd.onion";
+        let onion = OnionAddrV3::from_str(onion_str).unwrap();
+        assert_eq!(onion_str, onion.to_string());
+    }
+
+    #[test]
+    fn binary_code() {
+        let onion =
+            OnionAddrV3::from_str("vww6ybal4bd7szmgncyruucpgfkqahzddi37ktceo3ah7ngmcopnpyyd.onion")
+                .unwrap();
+        assert_eq!(onion, OnionAddrV3::from_raw_bytes(onion.into_raw_bytes()).unwrap());
+    }
 }
