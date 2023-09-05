@@ -19,7 +19,7 @@ license = "Apache-2.0"
 [workspace.dependencies]
 amplify = "4.0.0"
 cyphergraphy = { path = "cyphergraphy", version = "0.2.0" }
-cypheraddr = { path = "addr", version = "0.2.0" }
+cypheraddr = { path = "addr", version = "0.3.0" }
 eidolon-auth = { path = "eidolon", version = "0.2.0" }
 socks5-client = { path = "socks5-client", version = "0.2.0" }
 
@@ -29,7 +29,7 @@ socks5-client = { path = "socks5-client", version = "0.2.0" }
 
 [package]
 name = "cyphernet"
-version = "0.3.0"
+version = "0.4.0"
 description = "Cyphernet is a set of libraries for privacy-preserving networking apps"
 keywords = ["privacy", "noise-protocol", "cypherpunk", "tor", "nym"]
 categories = ["network-programming", "cryptography", "encoding"]
