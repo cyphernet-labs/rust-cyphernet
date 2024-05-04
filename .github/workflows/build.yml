@@ -49,7 +49,6 @@ jobs:
           - noise_x25519,noise_blake3
           - pem
           - multibase
-          - bech32
           - serde
     steps:
       - uses: actions/checkout@v2
