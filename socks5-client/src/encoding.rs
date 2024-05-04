@@ -185,13 +185,25 @@ impl Encoding for HostName {
                 return ip.encode(writer);
             }
             #[cfg(feature = "dns")]
-            HostName::Dns(name) => name.to_string(),
+            HostName::Dns(name) => {
+                DOMAIN.encode(writer)?;
+                name.to_string()
+            },
             #[cfg(feature = "tor")]
-            HostName::Tor(addr) => addr.to_string(),
+            HostName::Tor(addr) => {
+                DOMAIN.encode(writer)?;
+                addr.to_string()
+            },
             #[cfg(feature = "i2p")]
-            HostName::I2p(addr) => addr.to_string(),
+            HostName::I2p(addr) => {
+                DOMAIN.encode(writer)?;
+                addr.to_string()
+            },
             #[cfg(feature = "nym")]
-            HostName::Nym(addr) => addr.to_string(),
+            HostName::Nym(addr) => {
+                DOMAIN.encode(writer)?;
+                addr.to_string()
+            },
             _ => return Err(EncodingError::AddrNotSupported),
         };
         let len =
