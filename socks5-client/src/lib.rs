@@ -131,7 +131,7 @@ impl Socks5 {
                 Ok(vec![])
             }
             Socks5::Active(_) => Err(Error::Completed),
-            _ => Err(Error::Closed),
+            Socks5::Rejected(_) | Socks5::Failed(_) => Err(Error::Closed),
         }
     }
 
