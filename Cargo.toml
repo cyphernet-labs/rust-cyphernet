@@ -64,11 +64,11 @@ all = [
 eidolon = ["eidolon-auth"]
 
 # Addresses
-tor = ["cypheraddr/tor"]
-i2p = ["cypheraddr/i2p"]
-nym = ["cypheraddr/nym"]
+tor = ["cypheraddr/tor", "socks5-client/tor"]
+i2p = ["cypheraddr/i2p", "socks5-client/i2p"]
+nym = ["cypheraddr/nym", "socks5-client/nym"]
 mixnets = ["tor", "i2p", "nym"]
-dns = ["cypheraddr/dns"]
+dns = ["cypheraddr/dns", "socks5-client/dns"]
 p2p-ed25519 = ["cypheraddr/p2p-ed25519"]
 p2p-secp256k1 = ["cypheraddr/p2p-secp256k1"]
 

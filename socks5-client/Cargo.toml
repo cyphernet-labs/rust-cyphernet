@@ -16,6 +16,12 @@ license = { workspace = true }
 amplify = { workspace = true }
 cypheraddr = { workspace = true }
 
+[features]
+dns = ["cypheraddr/dns"]
+tor = ["cypheraddr/tor"]
+nym = ["cypheraddr/nym"]
+i2p = ["cypheraddr/i2p"]
+
 [package.metadata.docs.rs]
 all-features = true
 rustc-args = ["--cfg", "docsrs"]
