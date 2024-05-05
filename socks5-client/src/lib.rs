@@ -71,7 +71,7 @@ pub enum Socks5 {
     Awaiting,
     Reading(u8, u8),
     Active(NetAddr<HostName>),
-    Rejected(ServerError),
+    Rejected(ServerError, u8, u8),
     Failed(Error),
 }
 
@@ -116,10 +116,10 @@ impl Socks5 {
                 }
                 if input[1] != 0x00 {
                     let err = ServerError::from(input[1]);
-                    *self = Socks5::Rejected(err);
-                    return Err(Error::Closed);
+                    *self = Socks5::Rejected(err, input[3], input[4]);
+                } else {
+                    *self = Socks5::Reading(input[3], input[4]);
                 }
-                *self = Socks5::Reading(input[3], input[4]);
                 Ok(vec![])
             }
             Socks5::Reading(code1, code2) => {
@@ -132,7 +132,7 @@ impl Socks5 {
                 Ok(vec![])
             }
             Socks5::Active(_) => Err(Error::Completed),
-            Socks5::Rejected(_) | Socks5::Failed(_) => Err(Error::Closed),
+            Socks5::Rejected(_, _, _) | Socks5::Failed(_) => Err(Error::Closed),
         }
     }
 
@@ -141,11 +141,13 @@ impl Socks5 {
             Socks5::Initial(_, _) => 0,
             Socks5::Connected(_) => 2,
             Socks5::Awaiting => 5,
-            Socks5::Reading(ty, _) if *ty == IPV4 => 5,
-            Socks5::Reading(ty, _) if *ty == IPV6 => 17,
-            Socks5::Reading(ty, len) if *ty == DOMAIN => *len as usize + 1,
-            Socks5::Reading(_, _) => 1,
-            Socks5::Active(_) | Socks5::Rejected(_) | Socks5::Failed(_) => 0,
+            Socks5::Reading(ty, _) | Socks5::Rejected(_, ty, _) if *ty == IPV4 => 5,
+            Socks5::Reading(ty, _) | Socks5::Rejected(_, ty, _) if *ty == IPV6 => 17,
+            Socks5::Reading(ty, len) | Socks5::Rejected(_, ty, len) if *ty == DOMAIN => {
+                *len as usize + 1
+            }
+            Socks5::Reading(_, _) | Socks5::Rejected(_, _, _) => 1,
+            Socks5::Active(_) | Socks5::Failed(_) => 0,
         }
     }
 }
