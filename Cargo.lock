@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "cyphernet"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "cypheraddr",
  "cyphergraphy",
@@ -490,7 +490,7 @@ checksum = "74233d3b3b2f6d4b006dc19dee745e73e2a6bfb6f93607cd3b02bd5b00797d7c"
 
 [[package]]
 name = "socks5-client"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "amplify",
  "cypheraddr",
