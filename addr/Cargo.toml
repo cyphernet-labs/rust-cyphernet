@@ -1,6 +1,6 @@
 [package]
 name = "cypheraddr"
-version = "0.3.0"
+version = "0.4.0"
 description = "Network address types supporting proxying, mixnets, P2P with minimalistic dependencies (part of cyphernet suite)"
 keywords = ["cyphernet", "privacy", "tor", "nym", "i2p"]
 categories = ["network-programming", "encoding"]

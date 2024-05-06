@@ -1,6 +1,6 @@
 [package]
 name = "eidolon-auth"
-version = "0.2.0"
+version = "0.3.0"
 description = "Binary authentication protocol for network connections abstracted from encryption"
 keywords = ["cyphernet", "privacy", "euthentification", "network", "p2p"]
 categories = ["network-programming", "cryptography"]

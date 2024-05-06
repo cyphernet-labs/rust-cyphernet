@@ -195,7 +195,7 @@ checksum = "f3b7eb4404b8195a9abb6356f4ac07d8ba267045c8d6d220ac4dc992e6cc75df"
 
 [[package]]
 name = "cypheraddr"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "base32",
@@ -219,7 +219,7 @@ dependencies = [
 
 [[package]]
 name = "cyphernet"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "cypheraddr",
  "cyphergraphy",
@@ -286,7 +286,7 @@ dependencies = [
 
 [[package]]
 name = "eidolon-auth"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "amplify",
  "cyphergraphy",
