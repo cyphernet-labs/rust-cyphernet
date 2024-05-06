@@ -1,6 +1,6 @@
 [package]
 name = "socks5-client"
-version = "0.3.0"
+version = "0.4.0"
 description = "Socks5 clinet minimalistic library"
 keywords = ["cyphernet", "privacy", "noise", "end-to-end", "ecryption"]
 categories = ["network-programming", "cryptography"]
@@ -15,6 +15,12 @@ license = { workspace = true }
 [dependencies]
 amplify = { workspace = true }
 cypheraddr = { workspace = true }
+
+[features]
+dns = ["cypheraddr/dns"]
+tor = ["cypheraddr/tor"]
+nym = ["cypheraddr/nym"]
+i2p = ["cypheraddr/i2p"]
 
 [package.metadata.docs.rs]
 all-features = true

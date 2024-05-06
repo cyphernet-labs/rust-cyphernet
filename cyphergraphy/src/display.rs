@@ -33,9 +33,6 @@ pub enum Encoding {
     #[cfg(feature = "multibase")]
     Base32,
 
-    #[cfg(feature = "bech32")]
-    Bech32(String, bech32::Variant),
-
     #[cfg(feature = "multibase")]
     Base58,
 
@@ -59,12 +56,6 @@ impl Encoding {
                 let mut s: String = encode(Base::Base32Lower, data);
                 s.remove(0);
                 s
-            }
-
-            #[cfg(feature = "bech32")]
-            Encoding::Bech32(hrp, variant) => {
-                let b32 = bech32::ToBase32::to_base32(&data);
-                bech32::encode(hrp, b32, *variant).expect("invalid HRP")
             }
 
             #[cfg(feature = "multibase")]
