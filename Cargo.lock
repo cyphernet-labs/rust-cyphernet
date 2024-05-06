@@ -356,7 +356,7 @@ dependencies = [
 
 [[package]]
 name = "noise-framework"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "chacha20poly1305",
