@@ -23,6 +23,7 @@
 
 use std::cmp::Ordering;
 use std::ops::Deref;
+use amplify::Bytes32;
 
 use crate::*;
 
@@ -37,14 +38,14 @@ impl MultiDisplay<Encoding> for ec25519::x25519::PublicKey {
 impl EcPk for ec25519::x25519::PublicKey {
     const COMPRESSED_LEN: usize = 32;
     const CURVE_NAME: &'static str = "Curve25519";
-    type Compressed = [u8; 32];
+    type Compressed = Bytes32;
 
     fn base_point() -> Self { ec25519::x25519::PublicKey::base_point() }
 
-    fn to_pk_compressed(&self) -> Self::Compressed { *self.deref() }
+    fn to_pk_compressed(&self) -> Self::Compressed { Bytes32::from_byte_array(*self.deref()) }
 
     fn from_pk_compressed(pk: Self::Compressed) -> Result<Self, EcPkInvalid> {
-        Ok(ec25519::x25519::PublicKey::new(pk))
+        Ok(ec25519::x25519::PublicKey::new(pk.to_byte_array()))
     }
 
     fn from_pk_compressed_slice(slice: &[u8]) -> Result<Self, EcPkInvalid> {
@@ -53,7 +54,7 @@ impl EcPk for ec25519::x25519::PublicKey {
         }
         let mut buf = [0u8; 32];
         buf.copy_from_slice(slice);
-        Self::from_pk_compressed(buf)
+        Self::from_pk_compressed(buf.into())
     }
 }
 
@@ -111,7 +112,7 @@ impl Ord for PublicKey {
 impl EcPk for PublicKey {
     const COMPRESSED_LEN: usize = 32;
     const CURVE_NAME: &'static str = "Curve25519";
-    type Compressed = [u8; 32];
+    type Compressed = Bytes32;
 
     fn base_point() -> Self { Self(ec25519::x25519::PublicKey::base_point()) }
 

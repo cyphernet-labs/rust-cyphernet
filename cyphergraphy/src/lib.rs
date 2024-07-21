@@ -35,7 +35,8 @@ pub mod ed25519;
 
 pub mod display;
 
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 
 pub use digest::*;
 
@@ -119,7 +120,7 @@ pub trait EcPk: Clone + Eq + Send + Debug + MultiDisplay<Encoding> {
     const CURVE_NAME: &'static str;
 
     // TODO: When generic_const_exprs arrive switch to Self::COMPRESSED_LEN arrays
-    type Compressed: Copy + Sized + Send + AsRef<[u8]>;
+    type Compressed: Copy + Sized + Eq + Ord + Hash + AsRef<[u8]> + Send + Debug + Display;
 
     fn base_point() -> Self;
 

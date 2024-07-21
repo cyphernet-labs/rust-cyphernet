@@ -87,7 +87,7 @@ impl OnionAddrV3 {
         pk.copy_from_slice(&bytes[..32]);
         checksum.copy_from_slice(&bytes[32..34]);
 
-        let pk = PublicKey::from_pk_compressed(pk)?;
+        let pk = PublicKey::from_pk_compressed(pk.into())?;
         let checksum = u16::from_le_bytes(checksum);
         let addr = OnionAddrV3::from(pk);
 
@@ -154,7 +154,7 @@ impl FromStr for OnionAddrV3 {
         }
         let mut key = [0u8; 32];
         key.copy_from_slice(&data[..32]);
-        let pk = OnionAddrV3::from(PublicKey::from_pk_compressed(key)?);
+        let pk = OnionAddrV3::from(PublicKey::from_pk_compressed(key.into())?);
         let checksum = u16::from_le_bytes([data[32], data[33]]);
         if pk.checksum != checksum {
             return Err(OnionAddrParseError::InvalidChecksum {
